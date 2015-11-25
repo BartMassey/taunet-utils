@@ -14,6 +14,9 @@ import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
 
+(+++) :: BS.ByteString -> BS.ByteString -> BS.ByteString
+(+++) = BS.append
+
 taunetPort :: PortNumber
 taunetPort = 6283
 
@@ -43,9 +46,9 @@ receiveMessage key s = do
 sendMessage :: BS.ByteString -> Socket -> BS.ByteString -> IO ()
 sendMessage key s body = do
   let plaintext =
-          "version 0.2\r\n" `BS.append`
-          "to: fixme\r\n" `BS.append`
-          "from: po8\r\n\r\n" `BS.append`
+          "version 0.2\r\n" +++
+          "to: fixme\r\n" +++
+          "from: po8\r\n\r\n" +++
           body
   iv <- makeIV
   let ciphertext = encrypt scheduleReps key iv plaintext
