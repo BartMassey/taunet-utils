@@ -70,23 +70,23 @@ receiveMessage key s = do
   let plaintext = decrypt scheduleReps key ciphertext
   let headers = take 4 $ linesCRLF $ BSC.unpack plaintext
   return $ do
+    let failure msg = Failure msg plaintext
+    let removeHeader header target
+            | isPrefixOf paddedHeader target =
+                Right $ drop (length paddedHeader) target
+            | otherwise =
+                Left $ Failure ("bad header " ++ header) plaintext
+            where
+              paddedHeader = header ++ ": "
     failUnless (length headers == 4) $
-               Failure "mangled headers" plaintext
+               failure "mangled headers"
     failUnless (headers !! 0 == ("version " ++ versionNumber)) $
-               Failure "bad version header" plaintext
+               failure "bad version header"
     failUnless (headers !! 3 == "") $
-               Failure "bad end-of-headers" plaintext
-    toHeader <- removeHeader "to" (headers !! 1) plaintext
-    fromHeader <- removeHeader "from" (headers !! 2) plaintext
-    Right $ Message toHeader fromHeader plaintext
-  where
-    removeHeader header target plaintext
-        | isPrefixOf paddedHeader target =
-            Right $ drop (length paddedHeader) target
-        | otherwise =
-            Left $ Failure ("bad header " ++ header) plaintext
-        where
-          paddedHeader = header ++ ": "
+               failure "bad end-of-headers"
+    toHeader <- removeHeader "to" (headers !! 1)
+    fromHeader <- removeHeader "from" (headers !! 2)
+    return $ Message toHeader fromHeader plaintext
 
 sendMessage :: BS.ByteString -> SockAddr -> Message -> IO ()
 sendMessage key sendAddr message = do
