@@ -96,12 +96,13 @@ receiveMessage doCrypt key s = do
               paddedHeader = header ++ ": "
     failUnless (length headers == 4) $
                failure "mangled headers"
-    failUnless (headers !! 0 == ("version " ++ versionNumber)) $
-               failure "bad version header"
     failUnless (headers !! 3 == "") $
                failure "bad end-of-headers"
-    toHeader <- removeHeader "to" (headers !! 1)
-    fromHeader <- removeHeader "from" (headers !! 2)
+    versionHeader <- removeHeader "version" $ headers !! 0
+    failUnless (versionHeader == versionNumber) $
+               failure "bad version header"
+    toHeader <- removeHeader "to" $ headers !! 1
+    fromHeader <- removeHeader "from" $ headers !! 2
     return $ Message toHeader fromHeader plaintext
 
 sendMessage :: Bool -> BS.ByteString -> SockAddr -> Message -> IO ()
