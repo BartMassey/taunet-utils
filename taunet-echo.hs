@@ -20,8 +20,8 @@ import System.Posix.Process
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
 
-debug :: Bool
-debug = True
+nonDebug :: Bool
+nonDebug = False
 
 versionNumber :: String
 versionNumber = "0.2"
@@ -58,9 +58,11 @@ linesCRLF (c : cs) =
 
 data Message = Message { messageTo, messageFrom :: String,
                          messageBody :: BS.ByteString }
+             deriving Show
 
 data Failure = Failure { failureMessage :: String,
                          failureBody :: BS.ByteString }
+             deriving Show
 
 failUnless :: Bool -> Failure -> Either Failure ()
 failUnless True _ = Right ()
@@ -137,10 +139,11 @@ main = do
   listen taunetSocket 1
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
-    maybeFork debug $ do
+    maybeFork nonDebug $ do
       let sendAddr = fixAddr recvAddr
-      received <- receiveMessage debug key recvSocket
-      let sendIt = sendMessage debug key sendAddr
+      received <- receiveMessage nonDebug key recvSocket
+      when (not nonDebug) $ print received
+      let sendIt = sendMessage nonDebug key sendAddr
       case received of
         Right message -> sendIt message
         Left failure -> sendIt failMessage
