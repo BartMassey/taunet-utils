@@ -20,6 +20,9 @@ import System.Posix.Process
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
 
+debug :: Bool
+debug = True
+
 versionNumber :: String
 versionNumber = "0.2"
 
@@ -63,11 +66,15 @@ failUnless :: Bool -> Failure -> Either Failure ()
 failUnless True _ = Right ()
 failUnless False f = Left f
 
-receiveMessage :: BS.ByteString -> Socket -> IO (Either Failure Message)
-receiveMessage key s = do
-  ciphertext <- recv s maxMessageSize
+receiveMessage :: Bool -> BS.ByteString -> Socket
+               -> IO (Either Failure Message)
+receiveMessage doCrypt key s = do
+  messagetext <- recv s maxMessageSize
   close s
-  let plaintext = decrypt scheduleReps key ciphertext
+  let plaintext =
+          case doCrypt of
+            True -> decrypt scheduleReps key messagetext
+            False -> messagetext
   let headers = take 4 $ linesCRLF $ BSC.unpack plaintext
   return $ do
     let failure msg = Failure msg plaintext
@@ -88,8 +95,8 @@ receiveMessage key s = do
     fromHeader <- removeHeader "from" (headers !! 2)
     return $ Message toHeader fromHeader plaintext
 
-sendMessage :: BS.ByteString -> SockAddr -> Message -> IO ()
-sendMessage key sendAddr message = do
+sendMessage :: Bool -> BS.ByteString -> SockAddr -> Message -> IO ()
+sendMessage doCrypt key sendAddr message = do
   let plaintext =
         ("version 0.2\r\n" +++
         "to: " +++ toPerson +++ "\r\n" +++
@@ -98,11 +105,16 @@ sendMessage key sendAddr message = do
         where
           toPerson = BSC.pack $ messageFrom message
           fromPerson = BSC.pack $ messageTo message
-  iv <- makeIV
-  let ciphertext = encrypt scheduleReps key iv plaintext
+  messagetext <-
+      case doCrypt of
+        True -> do
+          iv <- makeIV
+          return $ encrypt scheduleReps key iv plaintext
+        False ->
+          return plaintext
   sendSocket <- socket AF_INET Stream defaultProtocol
   connect sendSocket sendAddr
-  _ <- send sendSocket ciphertext
+  _ <- send sendSocket messagetext
   close sendSocket
   return ()
 
@@ -118,12 +130,13 @@ main = do
   listen taunetSocket 1
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
-    _ <- forkProcess $ do
+    maybeFork debug $ do
       let sendAddr = fixAddr recvAddr
-      received <- receiveMessage key recvSocket
+      received <- receiveMessage debug key recvSocket
+      let sendIt = sendMessage debug key sendAddr
       case received of
-        Right message -> sendMessage key sendAddr message
-        Left failure -> sendMessage key sendAddr failMessage
+        Right message -> sendIt message
+        Left failure -> sendIt failMessage
                    where
                      failMessage = Message {
                        messageTo = "???",
@@ -133,3 +146,6 @@ main = do
                            "\r\n" +++ failureBody failure }
       exitSuccess
     return ()
+    where
+      maybeFork True a = do _ <- forkProcess a; return ()
+      maybeFork False a = a
