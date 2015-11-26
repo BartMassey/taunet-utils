@@ -10,10 +10,12 @@ import Control.Monad
 import Data.CipherSaber2
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import Data.List
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
+import System.Exit
 import System.IO
-import Data.List
+import System.Posix.Process
 
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
@@ -114,15 +116,18 @@ main = do
   listen taunetSocket 1
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
-    let sendAddr = fixAddr recvAddr
-    received <- receiveMessage key recvSocket
-    case received of
-      Right message -> sendMessage key sendAddr message
-      Left failure -> sendMessage key sendAddr failMessage
-                 where
-                   failMessage = Message {
-                     messageTo = "???",
-                     messageFrom = "po8",
-                     messageBody =
-                         BSC.pack (failureMessage failure) +++
-                         "\r\n" +++ failureBody failure }
+    _ <- forkProcess $ do
+      let sendAddr = fixAddr recvAddr
+      received <- receiveMessage key recvSocket
+      case received of
+        Right message -> sendMessage key sendAddr message
+        Left failure -> sendMessage key sendAddr failMessage
+                   where
+                     failMessage = Message {
+                       messageTo = "???",
+                       messageFrom = "po8",
+                       messageBody =
+                           BSC.pack (failureMessage failure) +++
+                           "\r\n" +++ failureBody failure }
+      exitSuccess
+    return ()
