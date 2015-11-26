@@ -1,9 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- Copyright © 2015 Bart Massey
 -- [This program is licensed under the GPL version 3 or later.]
 -- Please see the file COPYING in the source
 -- distribution of this software for license terms.
 
-{-# LANGUAGE OverloadedStrings #-}
 -- TauNet echo server
 
 import Control.Monad
@@ -13,9 +13,13 @@ import qualified Data.ByteString.Char8 as BSC
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
+import Data.List
 
-(+++) :: BS.ByteString -> BS.ByteString -> BS.ByteString
-(+++) = BS.append
+(+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
+(+++) = BSC.append
+
+versionNumber :: String
+versionNumber = "0.2"
 
 taunetPort :: PortNumber
 taunetPort = 6283
@@ -38,21 +42,64 @@ readKey = do
   key <- readFile "key.txt"
   return $ BSC.pack $ head $ lines key
 
-receiveMessage :: BS.ByteString -> Socket -> IO BS.ByteString
+linesCRLF :: String -> [String]
+linesCRLF [] = []
+linesCRLF ('\r' : '\n' : cs) =
+    [] : linesCRLF cs
+linesCRLF (c : cs) =
+    case linesCRLF cs of
+      [] -> [[c]]   -- String did not end in CRLF
+      (l : ls) -> (c : l) : ls
+
+data Message = Message { messageTo, messageFrom :: String,
+                         messageBody :: BS.ByteString }
+
+data Failure = Failure { failureMessage :: String,
+                         failureBody :: BS.ByteString }
+
+failUnless :: Bool -> Failure -> Either Failure ()
+failUnless True _ = Right ()
+failUnless False f = Left f
+
+receiveMessage :: BS.ByteString -> Socket -> IO (Either Failure Message)
 receiveMessage key s = do
   ciphertext <- recv s maxMessageSize
-  return $ decrypt scheduleReps key ciphertext
+  close s
+  let plaintext = decrypt scheduleReps key ciphertext
+  let headertext = linesCRLF $ BSC.unpack plaintext
+  return $ do
+    failUnless (headertext !! 0 == ("version " ++ versionNumber)) $
+               Failure "bad version header" plaintext
+    failUnless (headertext !! 3 == "") $
+               Failure "bad end-of-headers" plaintext
+    toHeader <- removeHeader "to" (headertext !! 1) plaintext
+    fromHeader <- removeHeader "from" (headertext !! 2) plaintext
+    Right $ Message toHeader fromHeader plaintext
+  where
+    removeHeader header target plaintext
+        | isPrefixOf paddedHeader target =
+            Right $ drop (length paddedHeader) target
+        | otherwise =
+            Left $ Failure ("bad header " ++ header) plaintext
+        where
+          paddedHeader = header ++ ": "
 
-sendMessage :: BS.ByteString -> Socket -> BS.ByteString -> IO ()
-sendMessage key s body = do
+sendMessage :: BS.ByteString -> SockAddr -> Message -> IO ()
+sendMessage key sendAddr message = do
   let plaintext =
-          "version 0.2\r\n" +++
-          "to: fixme\r\n" +++
-          "from: po8\r\n\r\n" +++
-          body
+        ("version 0.2\r\n" +++
+        "to: " +++ toPerson +++ "\r\n" +++
+        "from: " +++ fromPerson +++ "\r\n\r\n" +++
+        messageBody message) :: BSC.ByteString
+        where
+          toPerson = BSC.pack $ messageFrom message
+          fromPerson = BSC.pack $ messageTo message
   iv <- makeIV
   let ciphertext = encrypt scheduleReps key iv plaintext
-  _ <- send s ciphertext
+  sendSocket <- socket AF_INET Stream defaultProtocol
+  connect sendSocket sendAddr
+  _ <- send sendSocket ciphertext
+  close sendSocket
   return ()
 
 fixAddr :: SockAddr -> SockAddr
@@ -67,9 +114,15 @@ main = do
   listen taunetSocket 1
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
-    receivedMessage <- receiveMessage key recvSocket
-    close recvSocket
-    sendSocket <- socket AF_INET Stream defaultProtocol
-    connect sendSocket (fixAddr recvAddr)
-    sendMessage key sendSocket receivedMessage
-    close sendSocket
+    let sendAddr = fixAddr recvAddr
+    received <- receiveMessage key recvSocket
+    case received of
+      Right message -> sendMessage key sendAddr message
+      Left failure -> sendMessage key sendAddr failMessage
+                 where
+                   failMessage = Message {
+                     messageTo = "???",
+                     messageFrom = "po8",
+                     messageBody =
+                         BSC.pack (failureMessage failure) +++
+                         "\r\n" +++ failureBody failure }
