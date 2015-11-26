@@ -68,14 +68,16 @@ receiveMessage key s = do
   ciphertext <- recv s maxMessageSize
   close s
   let plaintext = decrypt scheduleReps key ciphertext
-  let headertext = linesCRLF $ BSC.unpack plaintext
+  let headers = take 4 $ linesCRLF $ BSC.unpack plaintext
   return $ do
-    failUnless (headertext !! 0 == ("version " ++ versionNumber)) $
+    failUnless (length headers == 4) $
+               Failure "mangled headers" plaintext
+    failUnless (headers !! 0 == ("version " ++ versionNumber)) $
                Failure "bad version header" plaintext
-    failUnless (headertext !! 3 == "") $
+    failUnless (headers !! 3 == "") $
                Failure "bad end-of-headers" plaintext
-    toHeader <- removeHeader "to" (headertext !! 1) plaintext
-    fromHeader <- removeHeader "from" (headertext !! 2) plaintext
+    toHeader <- removeHeader "to" (headers !! 1) plaintext
+    fromHeader <- removeHeader "from" (headers !! 2) plaintext
     Right $ Message toHeader fromHeader plaintext
   where
     removeHeader header target plaintext
