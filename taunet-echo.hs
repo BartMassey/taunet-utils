@@ -66,10 +66,17 @@ failUnless :: Bool -> Failure -> Either Failure ()
 failUnless True _ = Right ()
 failUnless False f = Left f
 
+recvAll :: Socket -> IO BS.ByteString
+recvAll s = do
+  bytes <- recv s maxMessageSize
+  case BS.length bytes of
+    0 -> return bytes
+    _ -> return . (bytes +++) =<< recvAll s
+
 receiveMessage :: Bool -> BS.ByteString -> Socket
                -> IO (Either Failure Message)
 receiveMessage doCrypt key s = do
-  messagetext <- recv s maxMessageSize
+  messagetext <- recvAll s
   close s
   let plaintext =
           case doCrypt of
