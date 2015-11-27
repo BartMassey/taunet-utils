@@ -16,6 +16,7 @@ import Network.Socket.ByteString
 import System.Exit
 import System.IO
 import System.Posix.Process
+import Network.Info
 
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
@@ -128,23 +129,30 @@ sendMessage doCrypt key sendAddr message = do
   close sendSocket
   return ()
 
-fixAddr :: SockAddr -> SockAddr
-fixAddr (SockAddrInet _ address) = SockAddrInet taunetPort address
-fixAddr _ = error "address type not supported"
+getLocalAddresses :: IO [HostAddress]
+getLocalAddresses = do
+  ifaces <- getNetworkInterfaces
+  return $ map ((\(IPv4 a) -> a) . ipv4) ifaces
+
+hostAddr :: SockAddr -> HostAddress
+hostAddr (SockAddrInet _ ha) = ha
+hostAddr _ = error "unsupported address type"
 
 main :: IO ()
 main = do
+  localAddresses <- getLocalAddresses
   key <- readKey
   taunetSocket <- socket AF_INET Stream defaultProtocol
   bind taunetSocket $ SockAddrInet taunetPort 0
   listen taunetSocket 1
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
-    maybeFork nonDebug $ do
-      let sendAddr = fixAddr recvAddr
+    _ <- forkProcess $ do
       received <- receiveMessage nonDebug key recvSocket
       when (not nonDebug) $ print received
-      let sendIt = sendMessage nonDebug key sendAddr
+      let ha = hostAddr recvAddr
+      when (ha `elem` localAddresses) exitSuccess
+      let sendIt = sendMessage nonDebug key $ SockAddrInet taunetPort ha
       case received of
         Right message -> sendIt message
         Left failure -> sendIt failMessage
@@ -157,6 +165,3 @@ main = do
                            "\r\n" +++ failureBody failure }
       exitSuccess
     return ()
-    where
-      maybeFork True a = do _ <- forkProcess a; return ()
-      maybeFork False a = a
