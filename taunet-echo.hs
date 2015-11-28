@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns #-}
 -- Copyright © 2015 Bart Massey
 -- [This program is licensed under the GPL version 3 or later.]
 -- Please see the file COPYING in the source
@@ -156,8 +156,8 @@ argd = [ Arg {
 main :: IO ()
 main = do
   argv <- parseArgsIO ArgsComplete argd
-  let encrypted = not $ gotArg argv ArgPlain
-  let debug = gotArg argv ArgDebug
+  let !encrypted = not $ gotArg argv ArgPlain
+  let !debug = gotArg argv ArgDebug
   localAddresses <- getLocalAddresses
   key <- readKey
   taunetSocket <- socket AF_INET Stream defaultProtocol
