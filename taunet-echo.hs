@@ -17,7 +17,8 @@ import System.Console.ParseArgs
 import System.Exit
 import System.IO
 import System.Posix.Process
-import Network.Info
+
+import LocalAddr
 
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
@@ -127,14 +128,13 @@ sendMessage doCrypt key sendAddr message = do
   close sendSocket
   return ()
 
-getLocalAddresses :: IO [HostAddress]
-getLocalAddresses = do
-  ifaces <- getNetworkInterfaces
-  return $ map ((\(IPv4 a) -> a) . ipv4) ifaces
+hostAddr :: SockAddr -> AddressData
+hostAddr (SockAddrInet _ ha) = AddressDataIPv4 ha
+hostAddr _ = error "hostAddr: unsupported address type"
 
-hostAddr :: SockAddr -> HostAddress
-hostAddr (SockAddrInet _ ha) = ha
-hostAddr _ = error "unsupported address type"
+portAddr :: PortNumber -> AddressData -> SockAddr
+portAddr p (AddressDataIPv4 ha) = SockAddrInet p ha
+portAddr _ _ = error "portAddr: unsupported address type"
 
 data ArgIndex = ArgPlain | ArgDebug
               deriving (Eq, Ord, Enum, Show)
@@ -158,7 +158,6 @@ main = do
   argv <- parseArgsIO ArgsComplete argd
   let !encrypted = not $ gotArg argv ArgPlain
   let !debug = gotArg argv ArgDebug
-  localAddresses <- getLocalAddresses
   key <- readKey
   taunetSocket <- socket AF_INET Stream defaultProtocol
   bind taunetSocket $ SockAddrInet taunetPort 0
@@ -169,8 +168,9 @@ main = do
       received <- receiveMessage encrypted key recvSocket
       when debug $ print received
       let ha = hostAddr recvAddr
+      localAddresses <- getLocalAddresses
       when (ha `elem` localAddresses) exitSuccess
-      let sendIt = sendMessage encrypted key $ SockAddrInet taunetPort ha
+      let sendIt = sendMessage encrypted key $ portAddr taunetPort ha
       case received of
         Right message -> sendIt message
         Left failure -> sendIt failMessage
