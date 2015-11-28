@@ -63,7 +63,7 @@ generateMessage maybeKey sendAddr message = do
           fromPerson = BSC.pack $ messageTo message
   sendMessage maybeKey sendAddr plaintext
 
-data ArgIndex = ArgPlain | ArgDebug | ArgFailSender
+data ArgIndex = ArgPlain | ArgDebug | ArgFailUser
               deriving (Eq, Ord, Enum, Show)
 
 argd :: [ Arg ArgIndex ]
@@ -80,19 +80,19 @@ argd = [ Arg {
            argData = Nothing,
            argDesc = "Do debugging things." },
          Arg {
-           argIndex = ArgFailSender,
-           argDesc = "Specify TauNet username of failed sender.",
+           argIndex = ArgFailUser,
+           argDesc = "Specify TauNet username used in failure reports.",
            argAbbr = Just 'f',
-           argName = Just "fail-sender",
-           argData = argDataDefaulted "taunet-username"
-                     ArgtypeString "TEST" } ]
+           argName = Just "fail-user",
+           argData = argDataDefaulted "username-prefix"
+                     ArgtypeString "FAIL" } ]
 
 main :: IO ()
 main = do
   argv <- parseArgsIO ArgsComplete argd
   let !encrypted = not $ gotArg argv ArgPlain
   let !debug = gotArg argv ArgDebug
-  let !failSender = getRequiredArg argv ArgFailSender
+  let !failUser = getRequiredArg argv ArgFailUser
   maybeKey <- maybeGetKey encrypted
   taunetSocket <- socket AF_INET Stream defaultProtocol
   bind taunetSocket $ SockAddrInet taunetPort 0
@@ -111,8 +111,8 @@ main = do
         Left failure -> sendIt failMessage
                    where
                      failMessage = Message {
-                       messageTo = "???",
-                       messageFrom = failSender,
+                       messageTo = failUser ++ "-TO",
+                       messageFrom = failUser ++ "-FROM",
                        messageBody =
                            BSC.pack (failureMessage failure) +++
                            "\r\n" +++ failureBody failure }

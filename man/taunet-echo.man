@@ -10,7 +10,7 @@ taunet-echo \- TauNet echo server
 .RI [ -p ]
 .RI [ -d ]
 .RI [ -f
-.BR <fail-sender> ]
+.BR <fail-user> ]
 .SH DESCRIPTION
 .PP
 This server will listen for a TauNet message and echo it
@@ -40,9 +40,10 @@ encryption of input or output.
 .B -d
 Do unspecified debugging things.
 .TP
-.BR "-f " fail-sender
-Specify a TauNet username that will be the "from" name for
-failure messages. Default is "TEST".
+.BR "-f " fail-user
+Specify a TauNet username that will be the used to form the
+"from" and "to" name for failure messages, by appending
+"-FROM" and "-TO" respectively. Default is "FAIL".
 .SH SEE ALSO
 taunet-send(1)
 .SH AUTHOR
