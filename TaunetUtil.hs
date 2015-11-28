@@ -8,14 +8,13 @@
 
 module TaunetUtil (
   (+++), versionNumber, taunetPort, maxMessageSize, scheduleReps,
-  makeIV, readKey, linesCRLF, Message(..), Failure(..),
+  makeIV, readKey, linesCRLF,
   failUnless, receiveMessage, sendMessage )
 where
 
 import Data.CipherSaber2
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import Data.List
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
@@ -47,6 +46,10 @@ readKey = do
   key <- readFile "key.txt"
   return $ BSC.pack $ head $ lines key
 
+failUnless :: Bool -> a -> Either a ()
+failUnless True _ = Right ()
+failUnless False f = Left f
+
 linesCRLF :: String -> [String]
 linesCRLF [] = []
 linesCRLF ('\r' : '\n' : cs) =
@@ -56,18 +59,6 @@ linesCRLF (c : cs) =
       [] -> [[c]]   -- String did not end in CRLF
       (l : ls) -> (c : l) : ls
 
-data Message = Message { messageTo, messageFrom :: String,
-                         messageBody :: BS.ByteString }
-             deriving Show
-
-data Failure = Failure { failureMessage :: String,
-                         failureBody :: BS.ByteString }
-             deriving Show
-
-failUnless :: Bool -> Failure -> Either Failure ()
-failUnless True _ = Right ()
-failUnless False f = Left f
-
 recvAll :: Socket -> IO BS.ByteString
 recvAll s = do
   bytes <- recv s maxMessageSize
@@ -75,52 +66,25 @@ recvAll s = do
     0 -> return bytes
     _ -> return . (bytes +++) =<< recvAll s
 
-receiveMessage :: Bool -> BS.ByteString -> Socket
-               -> IO (Either Failure Message)
-receiveMessage doCrypt key s = do
+receiveMessage :: Maybe BS.ByteString -> Socket
+               -> IO BS.ByteString
+receiveMessage maybeKey s = do
   messagetext <- recvAll s
   close s
   let plaintext =
-          case doCrypt of
-            True -> decrypt scheduleReps key messagetext
-            False -> messagetext
-  let headers = take 4 $ linesCRLF $ BSC.unpack plaintext
-  return $ do
-    let failure msg = Failure msg plaintext
-    let removeHeader header target
-            | isPrefixOf paddedHeader target =
-                Right $ drop (length paddedHeader) target
-            | otherwise =
-                Left $ Failure ("bad header " ++ header) plaintext
-            where
-              paddedHeader = header ++ ": "
-    failUnless (length headers == 4) $
-               failure "mangled headers"
-    failUnless (headers !! 3 == "") $
-               failure "bad end-of-headers"
-    versionHeader <- removeHeader "version" $ headers !! 0
-    failUnless (versionHeader == versionNumber) $
-               failure "bad version header"
-    toHeader <- removeHeader "to" $ headers !! 1
-    fromHeader <- removeHeader "from" $ headers !! 2
-    return $ Message toHeader fromHeader plaintext
+        case maybeKey of
+          Just key -> decrypt scheduleReps key messagetext
+          Nothing -> messagetext
+  return plaintext
 
-sendMessage :: Bool -> BS.ByteString -> SockAddr -> Message -> IO ()
-sendMessage doCrypt key sendAddr message = do
-  let plaintext =
-        ("version: 0.2\r\n" +++
-        "to: " +++ toPerson +++ "\r\n" +++
-        "from: " +++ fromPerson +++ "\r\n\r\n" +++
-        messageBody message) :: BSC.ByteString
-        where
-          toPerson = BSC.pack $ messageFrom message
-          fromPerson = BSC.pack $ messageTo message
+sendMessage :: Maybe BS.ByteString -> SockAddr -> BS.ByteString -> IO ()
+sendMessage maybeKey sendAddr plaintext = do
   messagetext <-
-      case doCrypt of
-        True -> do
+      case maybeKey of
+        Just key -> do
           iv <- makeIV
           return $ encrypt scheduleReps key iv plaintext
-        False ->
+        Nothing ->
           return plaintext
   sendSocket <- socket AF_INET Stream defaultProtocol
   connect sendSocket sendAddr
