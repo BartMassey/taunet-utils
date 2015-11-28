@@ -128,14 +128,6 @@ sendMessage doCrypt key sendAddr message = do
   close sendSocket
   return ()
 
-hostAddr :: SockAddr -> AddressData
-hostAddr (SockAddrInet _ ha) = AddressDataIPv4 ha
-hostAddr _ = error "hostAddr: unsupported address type"
-
-portAddr :: PortNumber -> AddressData -> SockAddr
-portAddr p (AddressDataIPv4 ha) = SockAddrInet p ha
-portAddr _ _ = error "portAddr: unsupported address type"
-
 data ArgIndex = ArgPlain | ArgDebug
               deriving (Eq, Ord, Enum, Show)
 

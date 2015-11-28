@@ -13,8 +13,16 @@ import Network.Socket.ByteString
 import System.Environment
 import System.IO
 
+import LocalAddr
+
+maxMessageSize :: Int
+maxMessageSize = 1024 * 1024
+
 taunetPort :: PortNumber
 taunetPort = 6283
+
+(+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
+(+++) = BSC.append
 
 sendMessage :: Socket -> IO ()
 sendMessage s = do
@@ -22,10 +30,39 @@ sendMessage s = do
   sendAll s messagetext
   close s
 
+recvAll :: Socket -> IO BSC.ByteString
+recvAll s = do
+  bytes <- recv s maxMessageSize
+  case BSC.length bytes of
+    0 -> return bytes
+    _ -> return . (bytes +++) =<< recvAll s
+
+receiveMessage :: Socket -> IO BSC.ByteString
+receiveMessage s = do
+  messagetext <- recvAll s
+  close s
+  return messagetext
+
 main :: IO ()
 main = do
+  localAddresses <- getLocalAddresses
   [ dest ] <- getArgs
   hostEntry <- getHostByName dest
-  taunetSocket <- socket AF_INET Stream defaultProtocol
-  connect taunetSocket $ SockAddrInet taunetPort (hostAddress $ hostEntry)
-  sendMessage taunetSocket
+  let ha = AddressDataIPv4 $ hostAddress hostEntry
+  let waitForIt = ha `notElem` localAddresses
+  maybeListenSocket <-
+      case waitForIt of
+        False ->
+          return Nothing
+        True -> do
+          listenSocket <- socket AF_INET Stream defaultProtocol
+          bind listenSocket $ portAddr taunetPort (AddressDataIPv4 0)
+          listen listenSocket 1
+          return $ Just listenSocket
+  sendSocket <- socket AF_INET Stream defaultProtocol
+  connect sendSocket $ portAddr taunetPort ha
+  sendMessage sendSocket
+  case maybeListenSocket of
+    Nothing -> return ()
+    Just listenSocket -> receiveMessage listenSocket >>= BSC.putStr
+
