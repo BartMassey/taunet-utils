@@ -60,7 +60,7 @@ executable taunet-echo
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.7 && <4.8,
+  build-depends:       base >=4 && <5,
                        ciphersaber2 >=0.1.1 && <0.2,
                        bytestring >=0.10 && <1.10,
                        network >=2.6 && <3,
@@ -87,7 +87,7 @@ executable taunet-send
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.7 && <4.8,
+  build-depends:       base >=4 && <5,
                        ciphersaber2 >=0.1.1 && <0.2,
                        bytestring >=0.10 && <1.10,
                        network >=2.6 && <3,
