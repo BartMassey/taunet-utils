@@ -108,7 +108,7 @@ receiveMessage doCrypt key s = do
 sendMessage :: Bool -> BS.ByteString -> SockAddr -> Message -> IO ()
 sendMessage doCrypt key sendAddr message = do
   let plaintext =
-        ("version 0.2\r\n" +++
+        ("version: 0.2\r\n" +++
         "to: " +++ toPerson +++ "\r\n" +++
         "from: " +++ fromPerson +++ "\r\n\r\n" +++
         messageBody message) :: BSC.ByteString
