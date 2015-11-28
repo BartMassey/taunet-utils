@@ -65,7 +65,8 @@ executable taunet-echo
                        bytestring >=0.10 && <1.10,
                        network >=2.6 && <3,
                        unix >=2.7 && <3,
-                       network-info >=0.2 && <1
+                       network-info >=0.2 && <1,
+                       parseargs >= 0.1 && <2
   
   -- Directories containing source files.
   -- hs-source-dirs:      
@@ -89,7 +90,8 @@ executable taunet-send
   build-depends:       base >=4.7 && <4.8,
                        ciphersaber2 >=0.1.1 && <0.2,
                        bytestring >=0.10 && <1.10,
-                       network >=2.6 && <3
+                       network >=2.6 && <3,
+                       parseargs >=0.1.2 && <1
   
   -- Directories containing source files.
   -- hs-source-dirs:      

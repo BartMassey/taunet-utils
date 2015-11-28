@@ -13,6 +13,7 @@ import qualified Data.ByteString.Char8 as BSC
 import Data.List
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
+import System.Console.ParseArgs
 import System.Exit
 import System.IO
 import System.Posix.Process
@@ -20,9 +21,6 @@ import Network.Info
 
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
-
-nonDebug :: Bool
-nonDebug = False
 
 versionNumber :: String
 versionNumber = "0.2"
@@ -138,8 +136,28 @@ hostAddr :: SockAddr -> HostAddress
 hostAddr (SockAddrInet _ ha) = ha
 hostAddr _ = error "unsupported address type"
 
+data ArgIndex = ArgPlain | ArgDebug
+              deriving (Eq, Ord, Enum, Show)
+
+argd :: [ Arg ArgIndex ]
+argd = [ Arg {
+           argIndex = ArgPlain,
+           argAbbr = Just 'p',
+           argName = Just "plain",
+           argData = Nothing,
+           argDesc = "Do not encrypt the incoming or outgoing messages." },
+         Arg {
+           argIndex = ArgDebug,
+           argAbbr = Just 'd',
+           argName = Just "debug",
+           argData = Nothing,
+           argDesc = "Do debugging things." } ]
+
 main :: IO ()
 main = do
+  argv <- parseArgsIO ArgsComplete argd
+  let encrypted = not $ gotArg argv ArgPlain
+  let debug = gotArg argv ArgDebug
   localAddresses <- getLocalAddresses
   key <- readKey
   taunetSocket <- socket AF_INET Stream defaultProtocol
@@ -148,11 +166,11 @@ main = do
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
     _ <- forkProcess $ do
-      received <- receiveMessage nonDebug key recvSocket
-      when (not nonDebug) $ print received
+      received <- receiveMessage encrypted key recvSocket
+      when debug $ print received
       let ha = hostAddr recvAddr
       when (ha `elem` localAddresses) exitSuccess
-      let sendIt = sendMessage nonDebug key $ SockAddrInet taunetPort ha
+      let sendIt = sendMessage encrypted key $ SockAddrInet taunetPort ha
       case received of
         Right message -> sendIt message
         Left failure -> sendIt failMessage
