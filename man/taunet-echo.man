@@ -1,0 +1,48 @@
+.\" Copyright (c) 2015 Bart Massey
+.\" This work is licensed under the GPL version 3 or later.
+.\" Please see the file COPYING in the source
+.\" distribution of this software for license terms.
+.TH TAUNET-ECHO 1 2015-11-28 "TauNet" "TauNet Manual"
+.SH NAME
+taunet-echo \- TauNet echo server
+.SH SYNOPSIS
+.B taunet-echo
+.RI [ -p ]
+.RI [ -d ]
+.SH DESCRIPTION
+.PP
+This server will listen for a TauNet message and echo it
+back as the body of a message sent to the TauNet server
+presumptively at the source address of the original.
+.PP
+When sending to a local address no reply will be sent, to
+avoid messaging loops.
+.PP
+If the incoming message is ill-formatted, the return
+message body will start with an error report.
+.PP
+The return message will be listed as from a TauNet user
+specifiable on the command line, and will be addressed to
+the incoming sender if possible.
+.PP
+For encryption, a file
+.B key.txt
+should be present in the startup directory, containing
+a single line comprising an ASCII CipherSaber-2 key.
+.SH OPTIONS
+.TP
+.B -p
+Act as a plaintext server, that is, do not do CipherSaber-2
+encryption of input or output.
+.TP
+.B -d
+Do unspecified debugging things.
+.SH SEE ALSO
+taunet-send(1)
+.SH AUTHOR
+Bart Massey
+.I <bart@cs.pdx.edu>
+.SH LICENSE
+This work is licensed under the GPL version 3 or later.
+Please see the file COPYING in the source distribution of
+this software for license terms.

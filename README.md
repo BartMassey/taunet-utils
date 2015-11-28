@@ -19,6 +19,14 @@ interacting with TauNet.
   to a TauNet server and listen for a return message, which
   it will write to standard output.
 
+See the manual pages in the `man/` subdirectory for details
+of invocation.
+
+These programs are buildable with Haskell Cabal and the
+appropriate packages. Say `cabal configure`, use `cabal
+install` to install requested packages, then say `cabal
+build`.
+
 This work is licensed under the GPL version 3 or later.
 Please see the file COPYING in the source distribution of
 this software for license terms.

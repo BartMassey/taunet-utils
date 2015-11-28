@@ -1,0 +1,46 @@
+.\" Copyright (c) 2015 Bart Massey
+.\" This work is licensed under the GPL version 3 or later.
+.\" Please see the file COPYING in the source
+.\" distribution of this software for license terms.
+.TH TAUNET-SEND 1 2015-11-28 "TauNet" "TauNet Utils"
+.SH NAME
+taunet-send \- TauNet message send utility
+.SH SYNOPSIS
+.B taunet-send
+.RI [ -p ]
+.I host-address
+.SH DESCRIPTION
+.PP
+This client will send its standard input to a TauNet server,
+and listen for a reply message which it will print on
+standard output. Note that while the messages will by
+default be encrypted / decrypted using CipherSaber-2, they
+are not in any way required / checked to conform to the
+TauNet protocol. This is useful for debugging. (Watch out
+for line endings.)
+.PP
+When sending to a local address no reply will be listened
+for, to avoid messaging loops.
+.PP
+For encryption, a file
+.B key.txt
+should be present in the startup directory, containing
+a single line comprising an ASCII CipherSaber-2 key.
+.SH OPTIONS
+.TP
+.B -p
+Act as a plaintext client, that is, do not do CipherSaber-2
+encryption of input or output.
+.TP
+.B host-address
+This destination address should be a numeric IPv4 address or
+a hostname that can be resolved to such.
+.SH SEE ALSO
+taunet-echo(1)
+.SH AUTHOR
+Bart Massey
+.I <bart@cs.pdx.edu>
+.SH LICENSE
+This work is licensed under the GPL version 3 or later.
+Please see the file COPYING in the source distribution of
+this software for license terms.
