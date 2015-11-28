@@ -64,5 +64,8 @@ main = do
   sendMessage sendSocket
   case maybeListenSocket of
     Nothing -> return ()
-    Just listenSocket -> receiveMessage listenSocket >>= BSC.putStr
-
+    Just listenSocket -> do
+      (recvSocket, _) <- accept listenSocket
+      reply <- receiveMessage recvSocket
+      close listenSocket
+      BSC.putStr reply
