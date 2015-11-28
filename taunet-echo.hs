@@ -85,9 +85,7 @@ main = do
   argv <- parseArgsIO ArgsComplete argd
   let !encrypted = not $ gotArg argv ArgPlain
   let !debug = gotArg argv ArgDebug
-  maybeKey <- case encrypted of
-                True -> readKey >>= return . Just
-                False -> return Nothing
+  maybeKey <- maybeGetKey encrypted
   taunetSocket <- socket AF_INET Stream defaultProtocol
   bind taunetSocket $ SockAddrInet taunetPort 0
   listen taunetSocket 1

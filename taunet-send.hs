@@ -9,16 +9,36 @@
 import qualified Data.ByteString.Char8 as BSC
 import Network.BSD
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
-import System.Environment
+import System.Console.ParseArgs
 import System.IO
 
 import LocalAddr
 import TaunetUtil
 
+data ArgIndex = ArgPlain | ArgDest
+              deriving (Eq, Ord, Enum, Show)
+
+argd :: [ Arg ArgIndex ]
+argd = [ Arg {
+           argIndex = ArgPlain,
+           argAbbr = Just 'p',
+           argName = Just "plain",
+           argData = Nothing,
+           argDesc = "Do not encrypt the incoming or outgoing messages." },
+         Arg {
+           argIndex = ArgDest,
+           argAbbr = Nothing,
+           argName = Nothing,
+           argData = argDataDefaulted "hostname" ArgtypeString "localhost",
+           argDesc = "Destination host." } ]
+
 main :: IO ()
 main = do
   localAddresses <- getLocalAddresses
-  [ dest ] <- getArgs
+  argv <- parseArgsIO ArgsComplete argd
+  let encrypted = not $ gotArg argv ArgPlain
+  maybeKey <- maybeGetKey encrypted
+  let dest = getRequiredArg argv ArgDest
   hostEntry <- getHostByName dest
   let ha = AddressDataIPv4 $ hostAddress hostEntry
   let waitForIt = ha `notElem` localAddresses
@@ -32,11 +52,11 @@ main = do
           listen listenSocket 1
           return $ Just listenSocket
   messagetext <- BSC.hGetContents stdin
-  sendMessage Nothing (portAddr taunetPort ha) messagetext
+  sendMessage maybeKey (portAddr taunetPort ha) messagetext
   case maybeListenSocket of
     Nothing -> return ()
     Just listenSocket -> do
       (recvSocket, _) <- accept listenSocket
-      reply <- receiveMessage Nothing recvSocket
+      reply <- receiveMessage maybeKey recvSocket
       close listenSocket
       BSC.putStr reply

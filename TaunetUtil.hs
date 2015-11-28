@@ -8,7 +8,7 @@
 
 module TaunetUtil (
   (+++), versionNumber, taunetPort, maxMessageSize, scheduleReps,
-  makeIV, readKey, linesCRLF,
+  makeIV, readKey, maybeGetKey, linesCRLF,
   failUnless, receiveMessage, sendMessage )
 where
 
@@ -45,6 +45,10 @@ readKey :: IO BS.ByteString
 readKey = do
   key <- readFile "key.txt"
   return $ BSC.pack $ head $ lines key
+
+maybeGetKey :: Bool -> IO (Maybe BS.ByteString)
+maybeGetKey True = readKey >>= return . Just
+maybeGetKey False = return Nothing
 
 failUnless :: Bool -> a -> Either a ()
 failUnless True _ = Right ()
