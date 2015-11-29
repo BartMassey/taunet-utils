@@ -10,7 +10,6 @@ import Control.Monad
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.List
-import Data.Time.LocalTime
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import System.Console.ParseArgs
 import System.Exit
@@ -18,6 +17,7 @@ import System.IO
 import System.Posix.Process
 import Text.Printf
 
+import DateTime
 import LocalAddr
 import TaunetUtil
 
@@ -71,8 +71,7 @@ generateMessage maybeKey sendAddr message = do
 logMessage :: AddressData -> Either Failure Message -> IO ()
 logMessage address msg = do
   let addressStr = show address
-  date <- getZonedTime
-  let dateStr = show date
+  dateStr <- getTimeRFC3339
   hLog <- openFile "echo.log" AppendMode
   case msg of
     Right (Message { messageFrom = from, messageTo = to }) -> do

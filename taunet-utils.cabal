@@ -54,7 +54,7 @@ executable taunet-echo
   main-is:             taunet-echo.hs
   
   -- Modules included in this executable, other than Main.
-  other-modules:       LocalAddr, TaunetUtil
+  other-modules:       LocalAddr, TaunetUtil, DateTime
   
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:    
@@ -67,7 +67,7 @@ executable taunet-echo
                        unix >=2 && <3,
                        network-info >=0.2 && <1,
                        parseargs >= 0.1 && <2,
-                       time >=1.0 && <2
+                       time >=1.5.0.1 && <2
 
   -- Directories containing source files.
   -- hs-source-dirs:      
@@ -82,7 +82,7 @@ executable taunet-send
   main-is:             taunet-send.hs
   
   -- Modules included in this executable, other than Main.
-  other-modules:       LocalAddr
+  other-modules:       LocalAddr, TaunetUtil
   
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:    

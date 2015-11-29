@@ -19,6 +19,7 @@ import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
 
+
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
 
@@ -44,7 +45,10 @@ makeIV =
 readKey :: IO BS.ByteString
 readKey = do
   key <- readFile "key.txt"
-  return $ BSC.pack $ head $ lines key
+  let keyLines = lines key
+  case keyLines of
+    [] -> error "failed to read any key lines"
+    (keyStr : _) -> return $ BSC.pack keyStr
 
 maybeGetKey :: Bool -> IO (Maybe BS.ByteString)
 maybeGetKey True = readKey >>= return . Just
