@@ -68,17 +68,33 @@ generateMessage maybeKey sendAddr message = do
 
 -- XXX Open the log file on each message for
 -- poor-person's synchronization.
+logString :: String -> IO ()
+logString msg = do
+  dateStr <- getTimeRFC3339
+  pid <- getProcessID
+  hLog <- openFile "echo.log" AppendMode
+  hPrintf hLog "%s: %s: %s\n" dateStr (show pid) msg
+  hClose hLog
+
 logMessage :: AddressData -> Either Failure Message -> IO ()
 logMessage address msg = do
   let addressStr = show address
-  dateStr <- getTimeRFC3339
-  hLog <- openFile "echo.log" AppendMode
   case msg of
     Right (Message { messageFrom = from, messageTo = to }) -> do
-      hPrintf hLog "%s: %s (%s) -> %s\n" dateStr from addressStr to
+      logString $ printf "%s (%s) -> %s" from addressStr to
     Left (Failure { failureMessage = failure }) ->
-      hPrintf hLog "%s: (%s) -> : %s\n" dateStr addressStr failure
-  hClose hLog
+      logString $ printf "(%s) -> : %s" addressStr failure
+
+reapChildren :: IO ()
+reapChildren = do
+  maybeChild <- getAnyProcessStatus False True
+  case maybeChild of
+    Nothing -> return ()
+    Just (pid, status) -> do
+      when (status /= Exited ExitSuccess) $
+           logString $ printf "%s exited prematurely: %s"
+                         (show pid) (show status)
+      reapChildren
 
 data ArgIndex = ArgPlain | ArgDebug | ArgFailUser
               deriving (Eq, Ord, Enum, Show)
@@ -135,4 +151,4 @@ main = do
                            BSC.pack (failureMessage failure) +++
                            "\r\n" +++ failureBody failure }
       exitSuccess
-    return ()
+    reapChildren
