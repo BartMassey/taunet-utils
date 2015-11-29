@@ -9,6 +9,7 @@ where
 
 import Data.Time.Format
 import Data.Time.LocalTime
+import System.Locale (defaultTimeLocale)
 
 -- | Get current date+time string in a reasonable format.
 getTimeRFC3339 :: IO String
