@@ -25,7 +25,8 @@ of invocation.
 These programs are buildable with Haskell Cabal and the
 appropriate packages. Say `cabal configure`, use `cabal
 install` to install requested packages, then say `cabal
-build`.
+build`. You will need at least GHC 2.7, because of the
+tangle of Hackage dependencies.
 
 This work is licensed under the GPL version 3 or later.
 Please see the file COPYING in the source distribution of
