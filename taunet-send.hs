@@ -48,6 +48,7 @@ main = do
           return Nothing
         True -> do
           listenSocket <- socket AF_INET Stream defaultProtocol
+          setSocketOption listenSocket ReuseAddr 1
           bind listenSocket $ portAddr taunetPort (AddressDataIPv4 0)
           listen listenSocket 1
           return $ Just listenSocket

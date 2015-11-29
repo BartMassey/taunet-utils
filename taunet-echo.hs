@@ -128,6 +128,7 @@ main = do
   let !failUser = getRequiredArg argv ArgFailUser
   maybeKey <- maybeGetKey encrypted
   taunetSocket <- socket AF_INET Stream defaultProtocol
+  setSocketOption taunetSocket ReuseAddr 1
   bind taunetSocket $ SockAddrInet taunetPort 0
   listen taunetSocket 1
   forever $ do
