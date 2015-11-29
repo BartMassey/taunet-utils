@@ -66,8 +66,9 @@ executable taunet-echo
                        network >=2.6 && <3,
                        unix >=2 && <3,
                        network-info >=0.2 && <1,
-                       parseargs >= 0.1 && <2
-  
+                       parseargs >= 0.1 && <2,
+                       time >=1.0 && <2
+
   -- Directories containing source files.
   -- hs-source-dirs:      
   

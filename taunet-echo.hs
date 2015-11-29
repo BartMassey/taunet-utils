@@ -7,13 +7,16 @@
 -- TauNet echo server
 
 import Control.Monad
-import Data.List
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import Data.List
+import Data.Time.LocalTime
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import System.Console.ParseArgs
 import System.Exit
+import System.IO
 import System.Posix.Process
+import Text.Printf
 
 import LocalAddr
 import TaunetUtil
@@ -63,6 +66,21 @@ generateMessage maybeKey sendAddr message = do
           fromPerson = BSC.pack $ messageTo message
   sendMessage maybeKey sendAddr plaintext
 
+-- XXX Open the log file on each message for
+-- poor-person's synchronization.
+logMessage :: AddressData -> Either Failure Message -> IO ()
+logMessage address msg = do
+  let addressStr = show address
+  date <- getZonedTime
+  let dateStr = show date
+  hLog <- openFile "echo.log" AppendMode
+  case msg of
+    Right (Message { messageFrom = from, messageTo = to }) -> do
+      hPrintf hLog "%s: %s (%s) -> %s\n" dateStr from addressStr to
+    Left (Failure { failureMessage = failure }) ->
+      hPrintf hLog "%s: (%s) -> : %s\n" dateStr addressStr failure
+  hClose hLog
+
 data ArgIndex = ArgPlain | ArgDebug | ArgFailUser
               deriving (Eq, Ord, Enum, Show)
 
@@ -103,6 +121,7 @@ main = do
       received <- parseMessage maybeKey recvSocket
       when debug $ print received
       let ha = hostAddr recvAddr
+      logMessage ha received
       localAddresses <- getLocalAddresses
       when (ha `elem` localAddresses) exitSuccess
       let sendIt = generateMessage maybeKey $ portAddr taunetPort ha
