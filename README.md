@@ -28,6 +28,18 @@ install` to install requested packages, then say `cabal
 build`. You will need at least GHC 2.7, because of the
 tangle of Hackage dependencies.
 
+To install `taunet-echo` on a machine for permanent-ish
+operation, scripts have been provided. Put `taunet-echo.sh`
+in `/etc/taunet-echo/` along with a valid `key.txt` and make
+the whole mess owned by user `taunet`. Copy
+`taunet-echo.init` to `/etc/init.d/`. Finally
+
+    systemctl daemon-reload
+    systemctl enable taunet-echo
+    systemctl start taunet-echo
+
+(Thanks <http://serverfault.com/a/713857>.)
+
 This work is licensed under the GPL version 3 or later.
 Please see the file COPYING in the source distribution of
 this software for license terms.
