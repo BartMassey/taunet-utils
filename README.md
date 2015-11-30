@@ -31,3 +31,31 @@ tangle of Hackage dependencies.
 This work is licensed under the GPL version 3 or later.
 Please see the file COPYING in the source distribution of
 this software for license terms.
+
+Here is the release announcement:
+
+---
+
+I now have a TauNet echo server running on
+barton.cs.pdx.edu.
+
+The server uses key password as per usual. If you send a
+TauNet message to this host, you will get back an
+instantaneous response whose body is your message as
+received by the echo server. The response will go back to
+whatever IP address you sent from. The echo server doesn't
+care about usernames, and will happily respond as whatever
+you called it to whatever you called yourself. If the echo
+server cannot process your message, it will attempt to send
+a failure report back anyhow, using usernames TEST-TO and
+TEST-FROM.
+
+Let me know if there are issues. I will try to keep this
+server up indefinitely. It may go down for a few seconds
+once in a while for maintenance.
+
+The source code is at
+<http://github.com/PSU-CS-300-Fall2015/taunet-utils>. It
+includes a test client that will send a message and listen
+for the response. It is vaguely ugly Haskell and may be hard
+to build and harder to work on.
