@@ -50,16 +50,16 @@ parseMessage maybeKey s = do
     versionHeader <- removeHeader "version" $ headers !! 0
     failUnless (versionHeader == versionNumber) $
                failure "bad version header"
-    toHeader <- removeHeader "to" $ headers !! 1
-    fromHeader <- removeHeader "from" $ headers !! 2
+    fromHeader <- removeHeader "from" $ headers !! 1
+    toHeader <- removeHeader "to" $ headers !! 2
     return $ Message toHeader fromHeader plaintext
 
 generateMessage :: Maybe BS.ByteString -> SockAddr -> Message -> IO ()
 generateMessage maybeKey sendAddr message = do
   let plaintext =
         ("version: 0.2\r\n" +++
-        "to: " +++ toPerson +++ "\r\n" +++
-        "from: " +++ fromPerson +++ "\r\n\r\n" +++
+        "from: " +++ fromPerson +++ "\r\n" +++
+        "to: " +++ toPerson +++ "\r\n\r\n" +++
         messageBody message) :: BSC.ByteString
         where
           toPerson = BSC.pack $ messageFrom message
