@@ -29,10 +29,10 @@ build`. You will need at least GHC 2.7, because of the
 tangle of Hackage dependencies.
 
 To install `taunet-echo` on a machine for permanent-ish
-operation, scripts have been provided. Put `taunet-echo.sh`
-in `/etc/taunet-echo/` along with a valid `key.txt` and make
-the whole mess owned by user `taunet`. Copy
-`taunet-echo.init` to `/etc/init.d/`. Finally
+operation, an init script has been provided. Put a valid
+`key.txt` in `/etc/taunet-echo/` and make the whole mess
+owned by user `taunet`. Copy `taunet-echo.init` to
+`/etc/init.d/`. Finally
 
     systemctl daemon-reload
     systemctl enable taunet-echo
