@@ -29,10 +29,8 @@ data Failure = Failure { failureMessage :: String,
                          failureBody :: BS.ByteString }
              deriving Show
 
-parseMessage :: Maybe BS.ByteString -> Socket
-             -> IO (Either Failure Message)
-parseMessage maybeKey s = do
-  plaintext <- receiveMessage maybeKey s
+parseMessage :: BS.ByteString -> IO (Either Failure Message)
+parseMessage plaintext = do
   let headers = take 4 $ linesCRLF $ BSC.unpack plaintext
   return $ do
     let failure msg = Failure msg plaintext
@@ -52,6 +50,8 @@ parseMessage maybeKey s = do
                failure "bad version header"
     fromHeader <- removeHeader "from" $ headers !! 1
     toHeader <- removeHeader "to" $ headers !! 2
+    failUnless (BS.length plaintext <= maxMessageSize) $
+               failure "overlong message"
     return $ Message toHeader fromHeader plaintext
 
 generateMessage :: Maybe BS.ByteString -> SockAddr -> Message -> IO ()
@@ -134,9 +134,15 @@ main = do
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
     _ <- forkProcess $ do
-      received <- parseMessage maybeKey recvSocket
-      when debug $ print received
       let ha = hostAddr recvAddr
+      plaintext <- receiveMessage maybeKey recvSocket
+      when (BS.length plaintext == 0) $ do
+        logString $ printf
+                      "(%s) ping (zero-length) message received and discarded"
+                      (show ha)
+        exitSuccess
+      received <- parseMessage plaintext
+      when debug $ print received
       logMessage ha received
       localAddresses <- getLocalAddresses
       when (ha `elem` localAddresses) exitSuccess
@@ -144,12 +150,12 @@ main = do
       case received of
         Right message -> sendIt message
         Left failure -> sendIt failMessage
-                   where
-                     failMessage = Message {
-                       messageTo = failUser ++ "-TO",
-                       messageFrom = failUser ++ "-FROM",
-                       messageBody =
-                           BSC.pack (failureMessage failure) +++
-                           "\r\n" +++ failureBody failure }
+                        where
+                          failMessage = Message {
+                            messageTo = failUser ++ "-TO",
+                            messageFrom = failUser ++ "-FROM",
+                            messageBody =
+                                BSC.pack (failureMessage failure) +++
+                                          "\r\n" +++ failureBody failure }
       exitSuccess
     reapChildren

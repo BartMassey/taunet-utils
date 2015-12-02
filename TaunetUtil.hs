@@ -30,7 +30,7 @@ taunetPort :: PortNumber
 taunetPort = 6283
 
 maxMessageSize :: Int
-maxMessageSize = 10240
+maxMessageSize = 1024
 
 scheduleReps :: Int
 scheduleReps = 20
@@ -67,23 +67,29 @@ linesCRLF (c : cs) =
       [] -> [[c]]   -- String did not end in CRLF
       (l : ls) -> (c : l) : ls
 
-recvAll :: Socket -> IO BS.ByteString
-recvAll s = do
-  bytes <- recv s maxMessageSize
-  case BS.length bytes of
-    0 -> return bytes
-    _ -> return . (bytes +++) =<< recvAll s
+-- Returns 'Nothing' on oversized message.
+recvAll :: Int -> Socket -> IO BS.ByteString
+recvAll received s
+    | received > maxMessageSize = return ""
+    | otherwise = do
+        bytes <- recv s (maxMessageSize - received)
+        case BS.length bytes of
+          0 -> return bytes
+          n -> do
+            rest <- recvAll (received + n) s
+            return $ bytes +++ rest
 
-receiveMessage :: Maybe BS.ByteString -> Socket
-               -> IO BS.ByteString
+-- Returns 'Nothing' on oversized message.
+receiveMessage :: Maybe BS.ByteString -> Socket -> IO BS.ByteString
 receiveMessage maybeKey s = do
-  messagetext <- recvAll s
+  messagetext <- recvAll 0 s
   close s
-  let plaintext =
+  return $ maybeDecrypt messagetext
+  where
+    maybeDecrypt text =
         case maybeKey of
-          Just key -> decrypt scheduleReps key messagetext
-          Nothing -> messagetext
-  return plaintext
+          Just key -> decrypt scheduleReps key text
+          Nothing -> text
 
 sendMessage :: Maybe BS.ByteString -> SockAddr -> BS.ByteString -> IO ()
 sendMessage maybeKey sendAddr plaintext = do
