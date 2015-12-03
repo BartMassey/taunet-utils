@@ -64,7 +64,7 @@ generateMessage maybeKey sendAddr message = do
         where
           toPerson = BSC.pack $ messageFrom message
           fromPerson = BSC.pack $ messageTo message
-  sendMessage maybeKey sendAddr plaintext
+  sendMessage maybeKey sendAddr $ BS.take maxMessageSize plaintext
 
 -- XXX Open the log file on each message for
 -- poor-person's synchronization.
