@@ -72,22 +72,27 @@ linesCRLF (c : cs) =
 unlinesCRLF :: [String] -> String
 unlinesCRLF = intercalate "\r\n"
 
--- Returns 'Nothing' on oversized message.
-recvAll :: Int -> Socket -> IO BS.ByteString
-recvAll received s
-    | received > maxMessageSize = return ""
+recvAll :: Maybe Int -> Socket -> IO BS.ByteString
+recvAll maybeRemaining s
+    | noRemainder = return ""
     | otherwise = do
-        bytes <- recv s (maxMessageSize - received)
+        -- XXX Pick a receive size here, really.
+        bytes <- recv s 4096
         case BS.length bytes of
           0 -> return bytes
           n -> do
-            rest <- recvAll (received + n) s
+            rest <- recvAll (fmap (`subtract` n) maybeRemaining) s
             return $ bytes +++ rest
+      where
+        noRemainder =
+            case maybeRemaining of
+              Nothing -> False
+              Just n -> n > 0
 
--- Returns 'Nothing' on oversized message.
-receiveMessage :: Maybe BS.ByteString -> Socket -> IO BS.ByteString
-receiveMessage maybeKey s = do
-  messagetext <- recvAll 0 s
+receiveMessage :: Maybe Int -> Maybe BS.ByteString -> Socket
+               -> IO BS.ByteString
+receiveMessage maybeLimit maybeKey s = do
+  messagetext <- recvAll maybeLimit s
   close s
   return $ maybeDecrypt messagetext
   where

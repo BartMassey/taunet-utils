@@ -79,7 +79,7 @@ main = do
     Nothing -> return ()
     Just listenSocket -> do
       (recvSocket, _) <- accept listenSocket
-      reply <- receiveMessage maybeKey recvSocket
+      reply <- receiveMessage Nothing maybeKey recvSocket
       close listenSocket
       putStr $ case keepCRLF of
                      True -> BSC.unpack reply

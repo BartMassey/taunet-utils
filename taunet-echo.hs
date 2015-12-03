@@ -31,6 +31,8 @@ data Failure = Failure { failureMessage :: String,
              deriving Show
 
 parseMessage :: BS.ByteString -> IO (Either Failure Message)
+parseMessage plaintext | BS.length plaintext > maxMessageSize =
+    return $ Left $ Failure "message too long" plaintext
 parseMessage plaintext = do
   let headers = take 4 $ linesCRLF $ BSC.unpack plaintext
   return $ do
@@ -152,7 +154,8 @@ main = do
     _ <- forkProcess $ do
       let ha = hostAddr recvAddr
       recvTime <- getTimeRFC3339
-      plaintext <- receiveMessage maybeKey recvSocket
+      plaintext <- receiveMessage (Just (2 * maxMessageSize))
+                     maybeKey recvSocket
       when (BS.length plaintext == 0) $ do
         logString $ printf
                       "(%s) ping (zero-length) message received and discarded"
