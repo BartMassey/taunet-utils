@@ -152,6 +152,7 @@ main = do
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
     _ <- forkProcess $ do
+      close taunetSocket
       let ha = hostAddr recvAddr
       recvTime <- getTimeRFC3339
       plaintext <- receiveMessage (Just (2 * maxMessageSize))
