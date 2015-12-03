@@ -13,7 +13,7 @@ interacting with TauNet.
 * `taunet-echo.hs`: This server will listen for a TauNet
   message and echo it back as the body of a message sent to
   the TauNet server presumptively at the source address of
-  the original.
+  the original, along with some status information.
 
 * `taunet-send.hs`: This client will send its standard input
   to a TauNet server and listen for a return message, which

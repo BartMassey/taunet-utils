@@ -15,7 +15,7 @@ import System.IO
 import LocalAddr
 import TaunetUtil
 
-data ArgIndex = ArgPlain | ArgPing | ArgDest
+data ArgIndex = ArgPlain | ArgPing | ArgKeepCRLF | ArgDest
               deriving (Eq, Ord, Enum, Show)
 
 argd :: [ Arg ArgIndex ]
@@ -31,6 +31,12 @@ argd = [ Arg {
            argName = Just "ping",
            argData = Nothing,
            argDesc = "Send a zero-length message; do not wait for reply." },
+         Arg {
+           argIndex = ArgKeepCRLF,
+           argAbbr = Just 'c',
+           argName = Just "cr",
+           argData = Nothing,
+           argDesc = "Do not do CRLF processing on input or output." },
          Arg {
            argIndex = ArgDest,
            argAbbr = Nothing,
@@ -59,8 +65,14 @@ main = do
           bind listenSocket $ portAddr taunetPort (AddressDataIPv4 0)
           listen listenSocket 1
           return $ Just listenSocket
+  let keepCRLF = gotArg argv ArgKeepCRLF
   messagetext <- case echoing of
-                   False -> BSC.hGetContents stdin
+                   False -> do
+                     msg <- BSC.hGetContents stdin
+                     case keepCRLF of
+                       True -> return msg
+                       False -> return $ BSC.pack $ unlinesCRLF $
+                                  lines $ BSC.unpack msg
                    True -> return ""
   sendMessage maybeKey (portAddr taunetPort ha) messagetext
   case maybeListenSocket of
@@ -69,4 +81,6 @@ main = do
       (recvSocket, _) <- accept listenSocket
       reply <- receiveMessage maybeKey recvSocket
       close listenSocket
-      BSC.putStr reply
+      putStr $ case keepCRLF of
+                     True -> BSC.unpack reply
+                     False -> unlines $ linesCRLF $ BSC.unpack reply

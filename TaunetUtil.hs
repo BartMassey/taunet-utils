@@ -8,13 +8,15 @@
 
 module TaunetUtil (
   (+++), versionNumber, taunetPort, maxMessageSize, scheduleReps,
-  makeIV, readKey, maybeGetKey, linesCRLF,
+  makeIV, readKey, maybeGetKey,
+  linesCRLF, unlinesCRLF,
   failUnless, receiveMessage, sendMessage )
 where
 
-import Data.CipherSaber2
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import Data.CipherSaber2
+import Data.List (intercalate)
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
@@ -66,6 +68,9 @@ linesCRLF (c : cs) =
     case linesCRLF cs of
       [] -> [[c]]   -- String did not end in CRLF
       (l : ls) -> (c : l) : ls
+
+unlinesCRLF :: [String] -> String
+unlinesCRLF = intercalate "\r\n"
 
 -- Returns 'Nothing' on oversized message.
 recvAll :: Int -> Socket -> IO BS.ByteString

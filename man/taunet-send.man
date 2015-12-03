@@ -8,6 +8,8 @@ taunet-send \- TauNet message send utility
 .SH SYNOPSIS
 .B taunet-send
 .RI [ -p ]
+.RI [ -P ] 
+.RI [ -c ]
 .I host-address
 .SH DESCRIPTION
 .PP
@@ -28,9 +30,17 @@ should be present in the startup directory, containing
 a single line comprising an ASCII CipherSaber-2 key.
 .SH OPTIONS
 .TP
-.B -p
+.BR -p , --plaintext
 Act as a plaintext client, that is, do not do CipherSaber-2
 encryption of input or output.
+.TP
+.BR -P , --ping
+Send an empty message and do not wait for a reply. Used to
+check for an open service port.
+.TP
+.BR -c , --cr
+Do not do CRLF processing. Normally, input and output are
+processed to give UNIX line endings.
 .TP
 .B host-address
 This destination address should be a numeric IPv4 address or
