@@ -9,6 +9,7 @@
 import Control.Monad
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import Data.Char
 import Data.List
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import System.Console.ParseArgs
@@ -49,10 +50,21 @@ parseMessage plaintext = do
     failUnless (versionHeader == versionNumber) $
                failure "bad version header"
     fromHeader <- removeHeader "from" $ headers !! 1
+    failUnless (validUsername fromHeader) $
+               failure "illegal from username"
     toHeader <- removeHeader "to" $ headers !! 2
+    failUnless (validUsername toHeader) $
+               failure "illegal to username"
     failUnless (BS.length plaintext <= maxMessageSize) $
                failure "overlong message"
     return $ Message toHeader fromHeader plaintext
+    where
+      validUsername name =
+          let nName = length name in
+          nName >= 3 && nName <= 30 &&
+          all validChar name
+          where
+            validChar c = isAlpha c || isDigit c || c == '-'
 
 generateMessage :: Maybe BS.ByteString -> SockAddr -> Message -> IO ()
 generateMessage maybeKey sendAddr message = do
