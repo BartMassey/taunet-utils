@@ -66,12 +66,15 @@ parseMessage plaintext = do
           where
             validChar c = isAlpha c || isDigit c || c == '-'
 
-generateMessage :: Maybe BS.ByteString -> SockAddr -> Message -> IO ()
-generateMessage maybeKey sendAddr message = do
+generateMessage :: Maybe BS.ByteString -> String -> SockAddr -> Message
+                -> IO ()
+generateMessage maybeKey recvTime sendAddr message = do
   let plaintext =
         ("version: 0.2\r\n" +++
         "from: " +++ fromPerson +++ "\r\n" +++
-        "to: " +++ toPerson +++ "\r\n\r\n" +++
+        "to: " +++ toPerson +++ "\r\n" +++
+        "\r\n" +++
+        BSC.pack recvTime +++ " " +++ BSC.pack (show sendAddr) +++ "\r\n" +++
         messageBody message) :: BSC.ByteString
         where
           toPerson = BSC.pack $ messageFrom message
@@ -147,6 +150,7 @@ main = do
     (recvSocket, recvAddr) <- accept taunetSocket
     _ <- forkProcess $ do
       let ha = hostAddr recvAddr
+      recvTime <- getTimeRFC3339
       plaintext <- receiveMessage maybeKey recvSocket
       when (BS.length plaintext == 0) $ do
         logString $ printf
@@ -158,7 +162,9 @@ main = do
       logMessage ha received
       localAddresses <- getLocalAddresses
       when (ha `elem` localAddresses) exitSuccess
-      let sendIt = generateMessage maybeKey $ portAddr taunetPort ha
+      let sendIt = generateMessage maybeKey
+                     recvTime
+                     (portAddr taunetPort ha)
       case received of
         Right message -> sendIt message
         Left failure -> sendIt failMessage

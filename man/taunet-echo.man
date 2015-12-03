@@ -20,8 +20,12 @@ presumptively at the source address of the original.
 When sending to a local address no reply will be sent, to
 avoid messaging loops.
 .PP
-If the incoming message is ill-formatted, the return
-message body will start with an error report.
+The return message body will consist of a line reporting the
+date and time that the request was received and the
+requesting IP address, followed by the request message in
+its entirety, but truncated to the maximum message length.
+If the incoming message is ill-formatted, the return message
+body will start with an error report.
 .PP
 The return message will be listed as from a TauNet user
 specifiable on the command line, and will be addressed to
