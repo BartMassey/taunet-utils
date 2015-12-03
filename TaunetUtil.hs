@@ -74,8 +74,7 @@ unlinesCRLF = intercalate "\r\n"
 
 recvAll :: Maybe Int -> Socket -> IO BS.ByteString
 recvAll maybeRemaining s
-    | noRemainder = return ""
-    | otherwise = do
+    | remainder = do
         -- XXX Pick a receive size here, really.
         bytes <- recv s 4096
         case BS.length bytes of
@@ -83,10 +82,11 @@ recvAll maybeRemaining s
           n -> do
             rest <- recvAll (fmap (`subtract` n) maybeRemaining) s
             return $ bytes +++ rest
+    | otherwise = return ""
       where
-        noRemainder =
+        remainder =
             case maybeRemaining of
-              Nothing -> False
+              Nothing -> True
               Just n -> n > 0
 
 receiveMessage :: Maybe Int -> Maybe BS.ByteString -> Socket
