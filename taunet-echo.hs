@@ -79,7 +79,8 @@ generateMessage maybeKey recvTime sendAddr message = do
         where
           toPerson = BSC.pack $ messageFrom message
           fromPerson = BSC.pack $ messageTo message
-  sendMessage maybeKey sendAddr $ BS.take maxMessageSize plaintext
+  let sa = portAddr taunetPort (hostAddr sendAddr)
+  sendMessage maybeKey sa $ BS.take maxMessageSize plaintext
 
 -- XXX Open the log file on each message for
 -- poor-person's synchronization.
@@ -162,9 +163,7 @@ main = do
       logMessage ha received
       localAddresses <- getLocalAddresses
       when (ha `elem` localAddresses) exitSuccess
-      let sendIt = generateMessage maybeKey
-                     recvTime
-                     (portAddr taunetPort ha)
+      let sendIt = generateMessage maybeKey recvTime recvAddr
       case received of
         Right message -> sendIt message
         Left failure -> sendIt failMessage
