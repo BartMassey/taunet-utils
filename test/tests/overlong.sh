@@ -15,7 +15,7 @@ then
     exit 1
 fi
 $TAUNET_SEND -c $ECHO_SERVER <misc/overlong.txt >$TMP
-if [ "`wc -c $TMP`" != 1024 ]
+if [ `wc -c <$TMP` -ne 1024 ]
 then
     [ -d failures ] || mkdir failures
     mv $TMP failures/overlong.txt
@@ -23,8 +23,7 @@ then
     exit 1
 fi
 sed -i -e '1,5d' $TMP
-N=`wc -c $TMP`
-if ! cmp -n $N -s misc/overlong.txt $TMP
+if ! cmp -n `wc -c <$TMP` -s misc/overlong.txt $TMP
 then
     [ -d failures ] || mkdir failures
     mv $TMP failures/overlong.txt
