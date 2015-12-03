@@ -15,7 +15,7 @@ import System.IO
 import LocalAddr
 import TaunetUtil
 
-data ArgIndex = ArgPlain | ArgDest
+data ArgIndex = ArgPlain | ArgPing | ArgDest
               deriving (Eq, Ord, Enum, Show)
 
 argd :: [ Arg ArgIndex ]
@@ -25,6 +25,12 @@ argd = [ Arg {
            argName = Just "plain",
            argData = Nothing,
            argDesc = "Do not encrypt the incoming or outgoing messages." },
+         Arg {
+           argIndex = ArgPing,
+           argAbbr = Just 'P',
+           argName = Just "ping",
+           argData = Nothing,
+           argDesc = "Send a zero-length message; do not wait for reply." },
          Arg {
            argIndex = ArgDest,
            argAbbr = Nothing,
@@ -37,13 +43,14 @@ main = do
   localAddresses <- getLocalAddresses
   argv <- parseArgsIO ArgsComplete argd
   let encrypted = not $ gotArg argv ArgPlain
-  maybeKey <- maybeGetKey encrypted
+  let echoing = gotArg argv ArgPing
+  maybeKey <- maybeGetKey (encrypted && not echoing)
   let dest = getRequiredArg argv ArgDest
   hostEntry <- getHostByName dest
   let ha = AddressDataIPv4 $ hostAddress hostEntry
   let waitForIt = ha `notElem` localAddresses
   maybeListenSocket <-
-      case waitForIt of
+      case waitForIt && not echoing of
         False ->
           return Nothing
         True -> do
@@ -52,7 +59,9 @@ main = do
           bind listenSocket $ portAddr taunetPort (AddressDataIPv4 0)
           listen listenSocket 1
           return $ Just listenSocket
-  messagetext <- BSC.hGetContents stdin
+  messagetext <- case echoing of
+                   False -> BSC.hGetContents stdin
+                   True -> return ""
   sendMessage maybeKey (portAddr taunetPort ha) messagetext
   case maybeListenSocket of
     Nothing -> return ()
