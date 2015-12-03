@@ -6,6 +6,8 @@
 
 # Upgrade the installed taunet-echo server.
 
-sudo rm /usr/local/sbin/taunet-echo
-sudo cp dist/build/taunet-echo/taunet-echo /usr/local/sbin/
+git pull &&
+cabal build &&
+sudo rm /usr/local/sbin/taunet-echo &&
+sudo cp dist/build/taunet-echo/taunet-echo /usr/local/sbin/ &&
 sudo service taunet-echo restart
