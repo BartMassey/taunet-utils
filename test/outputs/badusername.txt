@@ -1,0 +1,10 @@
+version: 0.2
+from: FAIL-TO
+to: FAIL-FROM
+
+illegal from username
+version: 0.2
+from: testie_testo
+to: po8
+
+testing...
