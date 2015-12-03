@@ -2,7 +2,7 @@ version: 0.2
 from: FAIL-TO
 to: FAIL-FROM
 
-mangled headers
+bad header from
 version: 0.2
 to: po8
 from: testie

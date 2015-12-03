@@ -22,8 +22,9 @@ mkdir $TMP
 for i in inputs/*.txt
 do
     N=`basename $i`
-    $TAUNET_SEND $ECHO_SERVER <inputs/$N >$TMP/$N
-    if ! cmp $TMP/$N outputs/$N
+    $TAUNET_SEND $ECHO_SERVER <inputs/$N |
+    sed -e '5d' >$TMP/$N
+    if ! cmp -s $TMP/$N outputs/$N
     then
         echo "$N failed" >&2
         [ -d failures ] || mkdir failures

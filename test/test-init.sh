@@ -17,5 +17,6 @@ fi
 for i in inputs/*.txt
 do
     N=`basename $i`
-    $TAUNET_SEND $ECHO_SERVER <inputs/$N >outputs/$N
+    $TAUNET_SEND $ECHO_SERVER <inputs/$N |
+    sed '5d' >outputs/$N
 done
