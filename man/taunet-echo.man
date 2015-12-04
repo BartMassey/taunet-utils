@@ -48,6 +48,23 @@ Do unspecified debugging things.
 Specify a TauNet username that will be the used to form the
 "from" and "to" name for failure messages, by appending
 "-FROM" and "-TO" respectively. Default is "FAIL".
+.SH COMMANDS
+.PP
+The echo server will process lines beginning with @ at the
+beginning of the incoming message body as commands. These
+commands allow the client to modify the servers echo
+behavior. When the same command is processed multiple times,
+the last value seen is used.
+.TP
+.BI @delay " <secs>"
+Makes the server delay for a fractional number of seconds
+before replying. The default delay is 0.1. The maximum delay
+is 60.
+.TP
+.BI @replies " <count>"
+Makes the server repeatedly send the reply. The default
+count is 1. The maximum count is 10. Zero is a legitimate
+count. The delay happens before each repetition.
 .SH SEE ALSO
 taunet-send(1)
 .SH AUTHOR
