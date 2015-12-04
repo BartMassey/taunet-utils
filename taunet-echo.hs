@@ -6,6 +6,7 @@
 
 -- TauNet echo server
 
+import Control.Concurrent.Thread.Delay
 import Control.Monad
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -25,6 +26,10 @@ import TaunetUtil
 data Command = CommandReplies Int | CommandDelay Double
              deriving Show
 
+data Knobs = Knobs {
+      knobReplies :: Int,
+      knobDelay :: Double }
+
 data Message = Message { messageTo, messageFrom :: String,
                          messageCommands :: [Command],
                          messageBody :: BS.ByteString }
@@ -35,6 +40,21 @@ data Failure = Failure { failureMessage :: String,
              deriving Show
 
 type FailFunc = String -> forall a . Either Failure a
+
+defaultKnobs :: Knobs
+defaultKnobs = Knobs {
+                 knobReplies = 1,
+                 knobDelay = 0.1 }
+
+getKnobs :: Either Failure Message -> Knobs
+getKnobs (Right (Message { messageCommands = commands})) =
+    foldl' handleCommand defaultKnobs commands
+    where
+      handleCommand knobs (CommandReplies n) =
+          knobs {knobReplies = n}
+      handleCommand knobs (CommandDelay d) =
+          knobs {knobDelay = d}
+getKnobs _ = defaultKnobs
 
 failVal :: BS.ByteString -> FailFunc
 failVal plaintext msg = Left $ Failure msg plaintext
@@ -48,9 +68,17 @@ readValue s failure =
 parseCommand :: [String] -> FailFunc -> Either Failure Command
 parseCommand ["replies", countString] failure = do
     count <- readValue countString failure :: Either Failure Int
+    failUnless (count >= 0) $
+        failure "cannot repeat negative times"
+    failUnless (count <= 10) $
+        failure "will not repeat more than 10 times"
     return $ CommandReplies count
 parseCommand ["delay", secondsString] failure = do
     seconds <- readValue secondsString failure :: Either Failure Double
+    failUnless (seconds >= 0) $
+        failure "cannot delay negative seconds"
+    failUnless (seconds <= 60) $
+        failure "will not delay more than 60 seconds"
     return $ CommandDelay seconds
 parseCommand [] failure =
     failure $ "missing command"
@@ -202,21 +230,24 @@ main = do
                       (show ha)
         exitSuccess
       let received = parseMessage plaintext
+      let knobs = getKnobs received
       when debug $ do print received
       logMessage ha received
       localAddresses <- getLocalAddresses
       when (ha `elem` localAddresses) exitSuccess
-      let sendIt = generateMessage maybeKey recvTime recvAddr
-      case received of
-        Right message -> sendIt message
-        Left failure -> sendIt failMessage
-                        where
-                          failMessage = Message {
-                            messageTo = failUser ++ "-TO",
-                            messageFrom = failUser ++ "-FROM",
-                            messageCommands = [],
-                            messageBody =
-                                BSC.pack (failureMessage failure) +++
-                                          "\r\n" +++ failureBody failure }
+      let replyMessage =
+              case received of
+                Right message -> message
+                Left failure ->
+                    Message {
+                      messageTo = failUser ++ "-TO",
+                      messageFrom = failUser ++ "-FROM",
+                      messageCommands = [],
+                      messageBody =
+                          BSC.pack (failureMessage failure) +++
+                                   "\r\n" +++ failureBody failure }
+      replicateM_ (knobReplies knobs) $ do
+        delay $ floor $ 1000000 * knobDelay knobs
+        generateMessage maybeKey recvTime recvAddr replyMessage
       exitSuccess
     reapChildren
