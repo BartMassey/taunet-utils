@@ -15,7 +15,7 @@ import System.IO
 import LocalAddr
 import TaunetUtil
 
-data ArgIndex = ArgPlain | ArgPing | ArgKeepCRLF | ArgDest
+data ArgIndex = ArgPlain | ArgPing | ArgKeepCRLF | ArgNReplies | ArgDest
               deriving (Eq, Ord, Enum, Show)
 
 argd :: [ Arg ArgIndex ]
@@ -38,10 +38,16 @@ argd = [ Arg {
            argData = Nothing,
            argDesc = "Do not do CRLF processing on input or output." },
          Arg {
+           argIndex = ArgNReplies,
+           argAbbr = Just 'n',
+           argName = Just "n-replies",
+           argData = argDataDefaulted "count" ArgtypeInt 1,
+           argDesc = "Expect n replies; print just the last." },
+         Arg {
            argIndex = ArgDest,
            argAbbr = Nothing,
            argName = Nothing,
-           argData = argDataDefaulted "hostname" ArgtypeString "localhost",
+           argData = argDataRequired "hostname" ArgtypeString,
            argDesc = "Destination host." } ]
 
 main :: IO ()
@@ -50,18 +56,19 @@ main = do
   argv <- parseArgsIO ArgsComplete argd
   let encrypted = not $ gotArg argv ArgPlain
   let echoing = gotArg argv ArgPing
+  let nReplies = getRequiredArg argv ArgNReplies
   maybeKey <- maybeGetKey (encrypted && not echoing)
   let dest = getRequiredArg argv ArgDest
   hostEntry <- getHostByName dest
   let ha = AddressDataIPv4 $ hostAddress hostEntry
-  let waitForIt = ha `notElem` localAddresses
+  let waitForIt = (ha `notElem` localAddresses) && nReplies > 0
   maybeListenSocket <-
       case waitForIt && not echoing of
         False ->
           return Nothing
         True -> do
           listenSocket <- socket AF_INET Stream defaultProtocol
-          setSocketOption listenSocket ReuseAddr 1
+          setSocketOption listenSocket ReuseAddr nReplies
           bind listenSocket $ portAddr taunetPort (AddressDataIPv4 0)
           listen listenSocket 1
           return $ Just listenSocket
@@ -78,9 +85,10 @@ main = do
   case maybeListenSocket of
     Nothing -> return ()
     Just listenSocket -> do
-      (recvSocket, _) <- accept listenSocket
-      reply <- receiveMessage Nothing maybeKey recvSocket
+      lastReply <- repeat1M nReplies $ do
+        (recvSocket, _) <- accept listenSocket
+        receiveMessage Nothing maybeKey recvSocket
       close listenSocket
       putStr $ case keepCRLF of
-                     True -> BSC.unpack reply
-                     False -> unlines $ linesCRLF $ BSC.unpack reply
+                     True -> BSC.unpack lastReply
+                     False -> unlines $ linesCRLF $ BSC.unpack lastReply

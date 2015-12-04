@@ -6,10 +6,11 @@
 -- taunet-utils utils
 
 module TaunetUtil (
-  (+++), versionNumber, taunetPort, maxMessageSize, scheduleReps,
-  makeIV, readKey, maybeGetKey,
+  (+++), versionNumber, taunetPort, maxMessageSize,
+  scheduleReps, makeIV, readKey, maybeGetKey,
   linesCRLF, unlinesCRLF,
-  failUnless, receiveMessage, sendMessage )
+  failUnless, repeat1M,
+  receiveMessage, sendMessage )
 where
 
 import qualified Data.ByteString as BS
@@ -58,6 +59,11 @@ maybeGetKey False = return Nothing
 failUnless :: Bool -> Either a () -> Either a ()
 failUnless True _ = Right ()
 failUnless False f = f
+
+repeat1M :: Monad m => Int -> m a -> m a
+repeat1M n _ | n <= 0 = error $ "repeat1M: insufficient count " ++ show n
+repeat1M 1 a = a
+repeat1M n a = a >> repeat1M (n - 1) a
 
 linesCRLF :: String -> [String]
 linesCRLF [] = []
