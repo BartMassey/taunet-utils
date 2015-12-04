@@ -3,7 +3,9 @@
 -- Please see the file COPYING in the source
 -- distribution of this software for license terms.
 
--- | Handle standard date and time stuff.
+-- | Gets the current date and time as a 'String'. Currently
+-- supports RFC 3339 time format or thereabouts. This module
+-- only exists because doing this is kind of a mess currently.
 module DateTime (getTimeRFC3339)
 where
 
@@ -11,7 +13,7 @@ import Data.Time.Format
 import Data.Time.LocalTime
 import System.Locale (defaultTimeLocale)
 
--- | Get current date+time string in a reasonable format.
+-- | Get a current date+time string in a reasonable format.
 getTimeRFC3339 :: IO String
 getTimeRFC3339 = do
   dateTime <- getZonedTime
