@@ -10,6 +10,7 @@ taunet-send \- TauNet message send utility
 .RI [ -p ]
 .RI [ -P ] 
 .RI [ -c ]
+.RI [ -n ]
 .I host-address
 .SH DESCRIPTION
 .PP
@@ -41,6 +42,9 @@ check for an open service port.
 .BR -c , --cr
 Do not do CRLF processing. Normally, input and output are
 processed to give UNIX line endings.
+.TP
+.BR -n , --n-replies " " <count>
+Wait for zero or more replies. Output the last reply received.
 .TP
 .B host-address
 This destination address should be a numeric IPv4 address or
