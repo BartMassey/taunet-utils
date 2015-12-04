@@ -1,1 +1,68 @@
-dist/build/taunet-echo/taunet-echo
+#!/bin/sh
+# kFreeBSD do not accept scripts as interpreters, using #!/bin/sh and sourcing.
+if [ true != "$INIT_D_SCRIPT_SOURCED" ] ; then
+    set "$0" "$@"; INIT_D_SCRIPT_SOURCED=true . /lib/init/init-d-script
+fi
+### BEGIN INIT INFO
+# Provides:          taunet-echo
+# Required-Start:    $networking
+# Required-Stop:     $networking
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: taunet-echo initscript
+# Description:       This maintains the taunet-echo service.
+### END INIT INFO
+
+# Author: Bart Massey <bart@cs.pdx.edu>
+
+DESC="TauNet echo server"
+PRG=taunet-echo
+DIR=/etc/taunet-echo
+DAEMON=/usr/local/sbin/taunet-echo
+CHUSER=taunet
+PIDFILE=/var/run/taunet-echo.pid
+
+do_start() {
+    log_daemon_msg "Starting $DESC"
+    log_progress_msg "$PRG"
+    if start-stop-daemon --start --quiet --background \
+			 --pidfile $PIDFILE --make-pidfile \
+			 --chuid $CHUSER --chdir $DIR \
+			 --exec $DAEMON </dev/null >>$DIR/echo.err 2>&1
+    then
+	log_end_msg 0
+    else
+	log_end_msg 1
+    fi
+}
+
+do_stop() {
+	log_daemon_msg "Stopping $DESC"
+	log_progress_msg "$PRG"
+	start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+	log_end_msg $?
+	rm -f $PIDFILE
+}
+
+case "$1" in
+	start)
+		do_start
+	;;
+	stop)
+		do_stop
+	;;
+	reload|force-reload|restart)
+		do_stop
+		sleep 1
+		do_start
+	;;
+	status)
+		status_of_proc -p $PIDFILE $DAEMON $PRG
+	;;
+	*)
+		echo "Usage: /etc/init.d/$PRG {start|stop|reload|force-reload|restart|status}"
+		exit 1
+	;;
+esac
+
+exit 0
