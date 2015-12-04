@@ -74,37 +74,36 @@ removeHeader header target failure
     where
       paddedHeader = header ++ ": "
 
-parseMessage :: BS.ByteString -> IO (Either Failure Message)
+parseMessage :: BS.ByteString -> Either Failure Message
 parseMessage plaintext | BS.length plaintext > maxMessageSize =
-    return $ Left $ Failure "message too long" plaintext
+    Left $ Failure "message too long" plaintext
 parseMessage plaintext = do
   let (headers, body) = splitAt 4 $ linesCRLF $ BSC.unpack plaintext
-  return $ do
-    let failure msg = failVal plaintext msg
-    failUnless (length headers == 4) $
-               failure "mangled headers"
-    failUnless (headers !! 3 == "") $
-               failure "bad end-of-headers"
-    versionHeader <- removeHeader "version" (headers !! 0) failure
-    failUnless (versionHeader == versionNumber) $
-               failure "bad version header"
-    fromHeader <- removeHeader "from" (headers !! 1) failure
-    failUnless (validUsername fromHeader) $
-               failure "illegal from username"
-    toHeader <- removeHeader "to" (headers !! 2) failure
-    failUnless (validUsername toHeader) $
-               failure "illegal to username"
-    failUnless (BS.length plaintext <= maxMessageSize) $
-               failure "overlong message"
-    commands <- parseCommands body failure
-    return $ Message toHeader fromHeader commands plaintext
-    where
-      validUsername name =
-          let nName = length name in
-          nName >= 3 && nName <= 30 &&
-          all validChar name
-          where
-            validChar c = isAlpha c || isDigit c || c == '-'
+  let failure msg = failVal plaintext msg
+  failUnless (length headers == 4) $
+             failure "mangled headers"
+  failUnless (headers !! 3 == "") $
+             failure "bad end-of-headers"
+  versionHeader <- removeHeader "version" (headers !! 0) failure
+  failUnless (versionHeader == versionNumber) $
+             failure "bad version header"
+  fromHeader <- removeHeader "from" (headers !! 1) failure
+  failUnless (validUsername fromHeader) $
+             failure "illegal from username"
+  toHeader <- removeHeader "to" (headers !! 2) failure
+  failUnless (validUsername toHeader) $
+             failure "illegal to username"
+  failUnless (BS.length plaintext <= maxMessageSize) $
+             failure "overlong message"
+  commands <- parseCommands body failure
+  return $ Message toHeader fromHeader commands plaintext
+  where
+    validUsername name =
+        let nName = length name in
+        nName >= 3 && nName <= 30 &&
+        all validChar name
+        where
+          validChar c = isAlpha c || isDigit c || c == '-'
 
 generateMessage :: Maybe BS.ByteString -> String -> SockAddr -> Message
                 -> IO ()
@@ -202,7 +201,7 @@ main = do
                       "(%s) ping (zero-length) message received and discarded"
                       (show ha)
         exitSuccess
-      received <- parseMessage plaintext
+      let received = parseMessage plaintext
       when debug $ do print received
       logMessage ha received
       localAddresses <- getLocalAddresses

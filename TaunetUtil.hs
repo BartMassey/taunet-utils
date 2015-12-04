@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, RankNTypes #-}
 -- Copyright © 2015 Bart Massey
 -- [This program is licensed under the GPL version 3 or later.]
 -- Please see the file COPYING in the source
@@ -82,7 +81,7 @@ recvAll maybeRemaining s
           n -> do
             rest <- recvAll (fmap (`subtract` n) maybeRemaining) s
             return $ bytes +++ rest
-    | otherwise = return ""
+    | otherwise = return BS.empty
       where
         remainder =
             case maybeRemaining of
