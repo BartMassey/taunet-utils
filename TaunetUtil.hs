@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, RankNTypes #-}
 -- Copyright © 2015 Bart Massey
 -- [This program is licensed under the GPL version 3 or later.]
 -- Please see the file COPYING in the source
@@ -56,9 +56,9 @@ maybeGetKey :: Bool -> IO (Maybe BS.ByteString)
 maybeGetKey True = readKey >>= return . Just
 maybeGetKey False = return Nothing
 
-failUnless :: Bool -> a -> Either a ()
+failUnless :: Bool -> Either a () -> Either a ()
 failUnless True _ = Right ()
-failUnless False f = Left f
+failUnless False f = f
 
 linesCRLF :: String -> [String]
 linesCRLF [] = []

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, RankNTypes #-}
 -- Copyright © 2015 Bart Massey
 -- [This program is licensed under the GPL version 3 or later.]
 -- Please see the file COPYING in the source
@@ -22,7 +22,11 @@ import DateTime
 import LocalAddr
 import TaunetUtil
 
+data Command = CommandReplies Int | CommandDelay Double
+             deriving Show
+
 data Message = Message { messageTo, messageFrom :: String,
+                         messageCommands :: [Command],
                          messageBody :: BS.ByteString }
              deriving Show
 
@@ -30,36 +34,70 @@ data Failure = Failure { failureMessage :: String,
                          failureBody :: BS.ByteString }
              deriving Show
 
+type FailFunc = String -> forall a . Either Failure a
+
+failVal :: BS.ByteString -> FailFunc
+failVal plaintext msg = Left $ Failure msg plaintext
+
+readValue :: Read a => String -> FailFunc -> Either Failure a
+readValue s failure =
+    case reads s of
+      [(v, "")] -> return v
+      _ -> failure $ "bad value " ++ s
+
+parseCommand :: [String] -> FailFunc -> Either Failure Command
+parseCommand ["replies", countString] failure = do
+    count <- readValue countString failure :: Either Failure Int
+    return $ CommandReplies count
+parseCommand ["delay", secondsString] failure = do
+    seconds <- readValue secondsString failure :: Either Failure Double
+    return $ CommandDelay seconds
+parseCommand [] failure =
+    failure $ "missing command"
+parseCommand (commandString : _) failure =
+    failure $ "bad command " ++ commandString
+
+parseCommands :: [String] -> FailFunc
+              -> Either Failure [Command]
+parseCommands (('@' : commandString) : body) failure = do
+    command <- parseCommand (words commandString) failure
+    commands <- parseCommands body failure
+    return $ command : commands
+parseCommands _ _ = return []
+
+removeHeader :: String -> String -> FailFunc -> Either Failure String
+removeHeader header target failure
+    | isPrefixOf paddedHeader target =
+        return $ drop (length paddedHeader) target
+    | otherwise =
+        failure $ "bad header " ++ header
+    where
+      paddedHeader = header ++ ": "
+
 parseMessage :: BS.ByteString -> IO (Either Failure Message)
 parseMessage plaintext | BS.length plaintext > maxMessageSize =
     return $ Left $ Failure "message too long" plaintext
 parseMessage plaintext = do
-  let headers = take 4 $ linesCRLF $ BSC.unpack plaintext
+  let (headers, body) = splitAt 4 $ linesCRLF $ BSC.unpack plaintext
   return $ do
-    let failure msg = Failure msg plaintext
-    let removeHeader header target
-            | isPrefixOf paddedHeader target =
-                Right $ drop (length paddedHeader) target
-            | otherwise =
-                Left $ Failure ("bad header " ++ header) plaintext
-            where
-              paddedHeader = header ++ ": "
+    let failure msg = failVal plaintext msg
     failUnless (length headers == 4) $
                failure "mangled headers"
     failUnless (headers !! 3 == "") $
                failure "bad end-of-headers"
-    versionHeader <- removeHeader "version" $ headers !! 0
+    versionHeader <- removeHeader "version" (headers !! 0) failure
     failUnless (versionHeader == versionNumber) $
                failure "bad version header"
-    fromHeader <- removeHeader "from" $ headers !! 1
+    fromHeader <- removeHeader "from" (headers !! 1) failure
     failUnless (validUsername fromHeader) $
                failure "illegal from username"
-    toHeader <- removeHeader "to" $ headers !! 2
+    toHeader <- removeHeader "to" (headers !! 2) failure
     failUnless (validUsername toHeader) $
                failure "illegal to username"
     failUnless (BS.length plaintext <= maxMessageSize) $
                failure "overlong message"
-    return $ Message toHeader fromHeader plaintext
+    commands <- parseCommands body failure
+    return $ Message toHeader fromHeader commands plaintext
     where
       validUsername name =
           let nName = length name in
@@ -155,15 +193,17 @@ main = do
       close taunetSocket
       let ha = hostAddr recvAddr
       recvTime <- getTimeRFC3339
-      plaintext <- receiveMessage (Just (2 * maxMessageSize))
-                     maybeKey recvSocket
+      plaintext <- receiveMessage
+                     (Just (2 * maxMessageSize))
+                     maybeKey
+                     recvSocket
       when (BS.length plaintext == 0) $ do
         logString $ printf
                       "(%s) ping (zero-length) message received and discarded"
                       (show ha)
         exitSuccess
       received <- parseMessage plaintext
-      when debug $ print received
+      when debug $ do print received
       logMessage ha received
       localAddresses <- getLocalAddresses
       when (ha `elem` localAddresses) exitSuccess
@@ -175,6 +215,7 @@ main = do
                           failMessage = Message {
                             messageTo = failUser ++ "-TO",
                             messageFrom = failUser ++ "-FROM",
+                            messageCommands = [],
                             messageBody =
                                 BSC.pack (failureMessage failure) +++
                                           "\r\n" +++ failureBody failure }
