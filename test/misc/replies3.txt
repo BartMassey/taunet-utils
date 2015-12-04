@@ -1,0 +1,10 @@
+version: 0.2
+from: Xx0-0xX
+to: po8
+
+@delay 10
+@replies 1
+@delay 0.1
+@replies 3
+
+This will be interesting...
