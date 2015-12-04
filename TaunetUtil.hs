@@ -3,13 +3,21 @@
 -- Please see the file COPYING in the source
 -- distribution of this software for license terms.
 
--- taunet-utils utils
-
+-- | Miscellaneous utility functions used by `taunet-utils`.
+-- These functions comprise shared functionality and
+-- factorable stuff.
 module TaunetUtil (
-  (+++), versionNumber, taunetPort, maxMessageSize,
+-- * 'ByteString' append operator.
+  (+++),
+-- * TauNet configuration constants.
+  versionNumber, taunetPort, maxMessageSize,
+-- * TauNet encryption stuff.
   scheduleReps, makeIV, readKey, maybeGetKey,
+-- * CRLF support.
   linesCRLF, unlinesCRLF,
+-- * Generic monadic actions.
   failUnless, repeat1M,
+-- * Network send and receive.
   receiveMessage, sendMessage )
 where
 
@@ -22,21 +30,29 @@ import Network.Socket.ByteString
 import System.IO
 
 
+-- | Append two bytestrings. Synonym for 'Data.ByteString.Append'.
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
 (+++) = BSC.append
 
+-- | Current official TauNet version number, as a 'String'.
 versionNumber :: String
 versionNumber = "0.2"
 
+-- | The official TauNet port is 6283, tau to four places.
 taunetPort :: PortNumber
 taunetPort = 6283
 
+-- | Current TauNet protocol max message size.
 maxMessageSize :: Int
 maxMessageSize = 1024
 
+-- | Number of CipherSaber-2 key scheduling repetitions in the
+-- current TauNet protocol.
 scheduleReps :: Int
 scheduleReps = 20
 
+-- | Use hardware random number generator to make a random
+-- 10-byte IV. Currently Linux-dependent.
 makeIV :: IO BS.ByteString
 makeIV = 
   withBinaryFile "/dev/urandom" ReadMode $ \h ->
@@ -44,6 +60,8 @@ makeIV =
     hSetBuffering h NoBuffering
     BS.hGet h 10
 
+-- | Read a TauNet RC4 keystring from "key.txt". This
+-- should clearly take the filename as an argument.
 readKey :: IO BS.ByteString
 readKey = do
   key <- readFile "key.txt"
@@ -52,19 +70,27 @@ readKey = do
     [] -> error "failed to read any key lines"
     (keyStr : _) -> return $ BSC.pack keyStr
 
+-- | Return an encryption key via 'readKey' if and only if
+-- asked to. This is awkward at best.
 maybeGetKey :: Bool -> IO (Maybe BS.ByteString)
 maybeGetKey True = readKey >>= return . Just
 maybeGetKey False = return Nothing
 
+-- | When the condition is 'True', 'failUnless' does nothing. When
+-- the condition is false, 'failUnless' returns the supplied
+-- failure value.
 failUnless :: Bool -> Either a () -> Either a ()
 failUnless True _ = Right ()
 failUnless False f = f
 
+-- | Repeatedly execute a monadic action, at least once, discarding
+-- all but the last result and returning it.
 repeat1M :: Monad m => Int -> m a -> m a
 repeat1M n _ | n <= 0 = error $ "repeat1M: insufficient count " ++ show n
 repeat1M 1 a = a
 repeat1M n a = a >> repeat1M (n - 1) a
 
+-- | Like 'Data.List.lines', but for CRLF data.
 linesCRLF :: String -> [String]
 linesCRLF [] = []
 linesCRLF ('\r' : '\n' : cs) =
@@ -74,9 +100,13 @@ linesCRLF (c : cs) =
       [] -> [[c]]   -- String did not end in CRLF
       (l : ls) -> (c : l) : ls
 
+-- | Like 'Data.List.unlines', but for CRLF data.
 unlinesCRLF :: [String] -> String
 unlinesCRLF = intercalate "\r\n"
 
+-- | Up to some possible limit, retrieve all the
+-- data available on the supplied 'Socket' and return
+-- it as a 'ByteString'.
 recvAll :: Maybe Int -> Socket -> IO BS.ByteString
 recvAll maybeRemaining s
     | remainder = do
@@ -94,6 +124,7 @@ recvAll maybeRemaining s
               Nothing -> True
               Just n -> n > 0
 
+-- | Retrieve and possibly decrypt the data of a TauNet message.
 receiveMessage :: Maybe Int -> Maybe BS.ByteString -> Socket
                -> IO BS.ByteString
 receiveMessage maybeLimit maybeKey s = do
@@ -106,6 +137,7 @@ receiveMessage maybeLimit maybeKey s = do
           Just key -> decrypt scheduleReps key text
           Nothing -> text
 
+-- | Possibly encrypt and then send the data of a TauNet message.
 sendMessage :: Maybe BS.ByteString -> SockAddr -> BS.ByteString -> IO ()
 sendMessage maybeKey sendAddr plaintext = do
   messagetext <-
