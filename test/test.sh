@@ -8,7 +8,7 @@
 # Tests should be hand-checked after creation for validity.
 TAUNET_SEND=../dist/build/taunet-send/taunet-send
 export TAUNET_SEND
-ECHO_SERVER=barton.cs.pdx.edu
+ECHO_SERVER=${ECHO_SERVER:-barton.cs.pdx.edu}
 export ECHO_SERVER
 if [ ! -x $TAUNET_SEND ]
 then
