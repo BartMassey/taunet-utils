@@ -156,7 +156,7 @@ logString msg = do
   dateStr <- getTimeRFC3339
   pid <- getProcessID
   hLog <- openFile "echo.log" AppendMode
-  hPrintf hLog "%s: %s: %s\n" dateStr (show pid) msg
+  _ <- hPrintf hLog "%s: %s: %s\n" dateStr (show pid) msg
   hClose hLog
 
 logMessage :: AddressData -> Either Failure Message -> IO ()
