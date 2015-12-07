@@ -32,13 +32,15 @@ To install `taunet-echo` on a machine for permanent-ish
 operation, an init script has been provided. Put a valid
 `key.txt` in `/etc/taunet-echo/` and make the whole mess
 owned by user `taunet`. Copy `taunet-echo.init` to
-`/etc/init.d/`. Finally
+`/etc/init.d/`. Do this
 
     systemctl daemon-reload
     systemctl enable taunet-echo
-    systemctl start taunet-echo
 
-(Thanks <http://serverfault.com/a/713857>.)
+(Thanks <http://serverfault.com/a/713857>.) Finally, run `sh
+upgrade.sh` to get the server installed and started.
+
+---
 
 This work is licensed under the GPL version 3 or later.
 Please see the file COPYING in the source distribution of
