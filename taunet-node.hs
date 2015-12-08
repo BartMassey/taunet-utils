@@ -129,6 +129,7 @@ displayThread requestBox = do
     unless h $ do
       qs <- readIORef holdQueue
       mapM_ handler $ reverse qs
+      writeIORef holdQueue []
       where
         handler (Display ha recvTime (Left failure)) =
           printf "%s: failed message from %s: %s\n\n"
