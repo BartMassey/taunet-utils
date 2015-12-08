@@ -46,7 +46,6 @@ receiveThread requestBox maybeKey = do
   listen taunetSocket 1
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
-    close taunetSocket
     let ha = hostAddr recvAddr
     recvTime <- getTimeRFC3339
     plaintext <- receiveMessage
