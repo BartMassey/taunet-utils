@@ -104,3 +104,34 @@ executable taunet-send
   default-language:    Haskell2010
   
   ghc-options:         -Wall
+
+executable taunet-node
+  -- .hs or .lhs file containing the Main module.
+  main-is:             taunet-node.hs
+  
+  -- Modules included in this executable, other than Main.
+  other-modules:       LocalAddr, TaunetUtil, TaunetMessage
+  
+  -- LANGUAGE extensions used by modules in this package.
+  -- other-extensions:    
+  
+  -- Other library packages from which modules are imported.
+  build-depends:       base >=4 && <5,
+                       ciphersaber2 >=0.1.1 && <0.2,
+                       bytestring >=0.10 && <1.10,
+                       network >=2.6 && <3,
+                       unix >=2 && <3,
+                       network-info >=0.2 && <1,
+                       parseargs >= 0.1 && <2,
+                       time >=1.4 && <1.5,
+                       old-locale >=1 && <2,
+                       unbounded-delays >=0.1 && <1
+
+  -- Directories containing source files.
+  -- hs-source-dirs:      
+  
+  -- Base language which the package is written in.
+  default-language:    Haskell2010
+  
+  ghc-options:         -Wall -threaded
+
