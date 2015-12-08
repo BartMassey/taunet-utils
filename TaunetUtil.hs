@@ -20,7 +20,7 @@ module TaunetUtil (
 -- * Network send and receive.
   receiveMessage, sendMessage, lookupHost,
 -- * Usermap
-  UserData(..), UserMap, getUserMap )
+  UserData(..), UserMap, getUserMap, lookupUserMap, printUserMap )
 where
 
 import qualified Data.ByteString as BS
@@ -32,6 +32,7 @@ import Network.BSD
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
+import Text.Printf
 import Text.SSV
 
 import LocalAddr
@@ -187,3 +188,20 @@ getUserMap = do
                 "" -> Nothing
                 n -> Just n
     readRecord _ = error "bad user table"
+
+lookupUserMap :: UserMap -> String -> Maybe UserData
+lookupUserMap userMap userId = M.lookup userId userMap
+
+printUserMap :: UserMap -> IO ()
+printUserMap userMap = do
+  flip mapM_ (M.elems userMap) $ (\u ->
+      case (userDataFullname u) of
+        Nothing ->
+            printf "%s\t%s\n"
+                   (userDataId u)
+                   (userDataHost u)
+        Just fn -> do
+            printf "%s\t%s\t%s\n"
+                   (userDataId u)
+                   (userDataHost u)
+                   fn )

@@ -67,49 +67,76 @@ receiveThread requestBox maybeKey = do
 
 sendThread :: MVar Request -> Maybe BS.ByteString -> String
            -> IO ()
-sendThread  requestBox maybeKey user = forever $ do
-  _ <- getLine
-  when debugMVar $ putStrLn "*sendThread: holding"
-  putMVar requestBox (Hold True)
-  when debugMVar $ putStrLn "*sendThread: held"
-  putStr "to: "
-  hFlush stdout
-  toUser <- getLine
-  putStrLn "Message: end with \".\" line to send or \"!\" line to abort"
-  body <- readBody
-  sendIt toUser body
-  when debugMVar $ putStrLn "*sendThread: unholding"
-  putMVar requestBox (Hold False)
-  when debugMVar $ putStrLn "*sendThread: unheld"
-  where
-    readBody = do
-      line <- getLine
-      case line of
-        "." -> return (Just [])
-        "!" -> do
-          putStrLn "Message aborted"
-          return Nothing
-        text -> do
-          rest <- readBody
-          return $ fmap (text :) rest
-    sendIt _ Nothing = return ()
-    sendIt dest (Just body) = do
-      -- XXX kludge until address book goes in
-      let destWords = words dest
-      case length destWords of
-        2 -> do
-          let [toUser, toHost] = destWords
-          maybeToAddr <- lookupHost toHost
-          case maybeToAddr of
-            Nothing -> putStrLn "host lookup failed"
-            Just toAddr -> do
-                let message = Message {
-                    messageTo = toUser,
-                    messageFrom = user,
-                    messageCommands = [],
-                    messageBody = BSC.pack $ unlines body }
-                generateMessage maybeKey Nothing toAddr message
-        _ -> putStrLn "could not parse destination"
+sendThread  requestBox maybeKey user = do
+  userTable <- getUserMap
+  forever $ do
+    _ <- getLine
+    when debugMVar $ putStrLn "*sendThread: holding"
+    putMVar requestBox (Hold True)
+    when debugMVar $ putStrLn "*sendThread: held"
+    maybeToUser <- getDest userTable
+    case maybeToUser of
+      Just (toUser, toAddr) -> do
+        putStrLn "Message: end with \".\" line to send or \"!\" line to abort"
+        body <- readBody
+        sendIt toUser toAddr body
+        when debugMVar $ putStrLn "*sendThread: unholding"
+        putMVar requestBox (Hold False)
+        when debugMVar $ putStrLn "*sendThread: unheld"
+      Nothing -> return ()
+    where
+      getDest userTable = do
+        putStr "to: "
+        hFlush stdout
+        dest <- getLine
+        let destWords = words dest
+        case destWords of
+          [] -> do
+            printUserMap userTable
+            return Nothing
+          [ toUser ] -> do
+            let maybeUserData = lookupUserMap userTable toUser
+            case maybeUserData of
+              Nothing -> do
+                putStrLn "unknown user"
+                return Nothing
+              Just userData ->
+                getDestAddr toUser (userDataHost userData)
+          [toUser, toHost] ->
+            getDestAddr toUser toHost
+          _ -> do
+            putStrLn "too much destination"
+            return Nothing
+
+        where
+          getDestAddr toUser toHost = do
+            maybeToAddr <- lookupHost toHost
+            case maybeToAddr of
+              Just toAddr -> return $ Just (toUser, toAddr)
+              Nothing -> do
+                 putStrLn "host lookup failed"
+                 return Nothing
+
+
+      readBody = do
+        line <- getLine
+        case line of
+          "." -> return (Just [])
+          "!" -> do
+            putStrLn "Message aborted"
+            return Nothing
+          text -> do
+            rest <- readBody
+            return $ fmap (text :) rest
+
+      sendIt _ _ Nothing = return ()
+      sendIt toUser toAddr (Just body) = do
+        let message = Message {
+          messageTo = toUser,
+          messageFrom = user,
+          messageCommands = [],
+          messageBody = BSC.pack $ unlines body }
+        generateMessage maybeKey Nothing toAddr message
 
 displayThread :: MVar Request -> IO ()
 displayThread requestBox = do
