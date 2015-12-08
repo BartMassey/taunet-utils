@@ -105,10 +105,11 @@ removeHeader header target failure
     where
       paddedHeader = header ++ ": "
 
-parseMessage :: BS.ByteString -> Either Failure Message
-parseMessage plaintext | BS.length plaintext > maxMessageSize =
-    Left $ Failure "message too long" plaintext
-parseMessage plaintext = do
+parseMessage :: Bool -> BS.ByteString -> Either Failure Message
+parseMessage _ plaintext
+    | BS.length plaintext > maxMessageSize =
+        Left $ Failure "message too long" plaintext
+parseMessage processCommands plaintext = do
   let (headers, body) = splitAt 4 $ linesCRLF $ BSC.unpack plaintext
   let failure msg = failVal plaintext msg
   failUnless (length headers == 4) $
@@ -126,7 +127,9 @@ parseMessage plaintext = do
              failure "illegal to username"
   failUnless (BS.length plaintext <= maxMessageSize) $
              failure "overlong message"
-  commands <- parseCommands body failure
+  commands <- if processCommands
+              then parseCommands body failure
+              else return []
   return $ Message toHeader fromHeader commands plaintext
   where
     validUsername name =

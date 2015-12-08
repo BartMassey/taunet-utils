@@ -82,7 +82,7 @@ main = do
                       "(%s) ping (zero-length) message received and discarded"
                       (show ha)
         exitSuccess
-      let received = parseMessage plaintext
+      let received = parseMessage True plaintext
       let knobs = getKnobs received
       when debug $ do print received
       logMessage ha received
