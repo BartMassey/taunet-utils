@@ -1,6 +1,6 @@
 version: 0.2
-from: FAIL-TO
-to: FAIL-FROM
+from: FAIL-FROM
+to: FAIL-TO
 
 illegal to username
 version: 0.2
