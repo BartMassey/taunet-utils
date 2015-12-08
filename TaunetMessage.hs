@@ -139,21 +139,28 @@ parseMessage processCommands plaintext = do
         where
           validChar c = isAlpha c || isDigit c || c == '-'
 
-generateMessage :: Maybe BS.ByteString -> String -> SockAddr -> Message
+generateMessage :: Maybe BS.ByteString -> Maybe (String, SockAddr)
+                -> AddressData -> Message
                 -> IO ()
-generateMessage maybeKey recvTime sendAddr message = do
+generateMessage maybeKey maybeStamp dest message = do
   let plaintext =
         ("version: 0.2\r\n" +++
         "from: " +++ fromPerson +++ "\r\n" +++
         "to: " +++ toPerson +++ "\r\n" +++
         "\r\n" +++
-        BSC.pack recvTime +++ " " +++ BSC.pack (show sendAddr) +++ "\r\n" +++
+        makeStamp +++
         messageBody message) :: BSC.ByteString
         where
           toPerson = BSC.pack $ messageFrom message
           fromPerson = BSC.pack $ messageTo message
-  let sa = portAddr taunetPort (hostAddr sendAddr)
+  let sa = portAddr taunetPort dest
   sendMessage maybeKey sa $ BS.take maxMessageSize plaintext
+  where
+    makeStamp =
+        case maybeStamp of
+          Nothing -> ""
+          Just (r, a) ->
+              BSC.pack r +++ " " +++ BSC.pack (show a) +++ "\r\n"
 
 -- XXX Open the log file on each message for
 -- poor-person's synchronization.

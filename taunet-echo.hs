@@ -101,6 +101,9 @@ main = do
                                    "\r\n" +++ failureBody failure }
       replicateM_ (knobReplies knobs) $ do
         delay $ floor $ 1000000 * knobDelay knobs
-        generateMessage maybeKey recvTime recvAddr replyMessage
+        generateMessage maybeKey
+                        (Just (recvTime, recvAddr))
+                        (hostAddr recvAddr)
+                        replyMessage
       exitSuccess
     reapChildren
