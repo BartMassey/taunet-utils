@@ -67,6 +67,7 @@ main = do
   setSocketOption taunetSocket ReuseAddr 1
   bind taunetSocket $ SockAddrInet taunetPort 0
   listen taunetSocket 1
+  logString "taunet-echo begins"
   forever $ do
     (recvSocket, recvAddr) <- accept taunetSocket
     _ <- forkProcess $ do
