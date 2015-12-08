@@ -151,7 +151,7 @@ sendMessage maybeKey sendAddr plaintext = do
           return plaintext
   sendSocket <- socket AF_INET Stream defaultProtocol
   connect sendSocket sendAddr
-  _ <- send sendSocket messagetext
+  sendAll sendSocket messagetext
   close sendSocket
   return ()
 
