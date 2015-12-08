@@ -151,8 +151,8 @@ generateMessage maybeKey maybeStamp dest message = do
         makeStamp +++
         messageBody message) :: BSC.ByteString
         where
-          toPerson = BSC.pack $ messageFrom message
-          fromPerson = BSC.pack $ messageTo message
+          fromPerson = BSC.pack $ messageFrom message
+          toPerson = BSC.pack $ messageTo message
   let sa = portAddr taunetPort dest
   sendMessage maybeKey sa $ BS.take maxMessageSize plaintext
   where

@@ -132,8 +132,8 @@ sendThread  requestBox maybeKey user = do
       sendIt _ _ Nothing = return ()
       sendIt toUser toAddr (Just body) = do
         let message = Message {
-          messageTo = toUser,
           messageFrom = user,
+          messageTo = toUser,
           messageCommands = [],
           messageBody = BSC.pack $ unlines body }
         generateMessage maybeKey Nothing toAddr message
