@@ -148,6 +148,6 @@ main = do
   let !user = getRequiredArg argv ArgUser
   maybeKey <- maybeGetKey True
   requestBox <- newEmptyMVar
-  runInBoundThread $ displayThread requestBox
-  runInBoundThread $ receiveThread requestBox maybeKey
+  _ <- forkIO $ displayThread requestBox
+  _ <- forkIO $ receiveThread requestBox maybeKey
   sendThread requestBox maybeKey user
