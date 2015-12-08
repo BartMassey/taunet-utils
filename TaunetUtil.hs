@@ -18,17 +18,21 @@ module TaunetUtil (
 -- * Generic monadic actions.
   failUnless, repeat1M,
 -- * Network send and receive.
-  receiveMessage, sendMessage, lookupHost )
+  receiveMessage, sendMessage, lookupHost,
+-- * Usermap
+  UserData(..), UserMap, getUserMap )
 where
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.CipherSaber2
 import Data.List (intercalate)
+import qualified Data.Map as M
 import Network.BSD
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
+import Text.SSV
 
 import LocalAddr
 
@@ -160,3 +164,26 @@ lookupHost dest = do
   hostEntry <- getHostByName dest
   -- XXX For now, assume lookup always succeeds.
   return $ Just $ AddressDataIPv4 $ hostAddress hostEntry
+
+data UserData = UserData {
+      userDataId :: String,
+      userDataHost :: String,
+      userDataFullname :: Maybe String }
+
+type UserMap = M.Map String UserData
+
+getUserMap :: IO UserMap
+getUserMap = do
+  csvFile <- readFile "node-table.csv"
+  let records = map readRecord $ readCSV csvFile
+  return $ M.fromList records
+  where
+    readRecord [userId, userHost, userFullname] =
+        (userId, UserData userId userHost maybeFullname)
+        where
+          maybeFullname =
+              let cleanName = unwords $ words userFullname in
+              case cleanName of
+                "" -> Nothing
+                n -> Just n
+    readRecord _ = error "bad user table"
