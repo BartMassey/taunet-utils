@@ -23,6 +23,7 @@ module TaunetUtil (
   UserData(..), UserMap, getUserMap, lookupUserMap, printUserMap )
 where
 
+import Control.Exception
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.CipherSaber2
@@ -145,7 +146,8 @@ receiveMessage maybeLimit maybeKey s = do
           Nothing -> text
 
 -- | Possibly encrypt and then send the data of a TauNet message.
-sendMessage :: Maybe BS.ByteString -> SockAddr -> BS.ByteString -> IO ()
+sendMessage :: Maybe BS.ByteString -> SockAddr -> BS.ByteString
+            -> IO (Either String ())
 sendMessage maybeKey sendAddr plaintext = do
   messagetext <-
       case maybeKey of
@@ -155,10 +157,15 @@ sendMessage maybeKey sendAddr plaintext = do
         Nothing ->
           return plaintext
   sendSocket <- socket AF_INET Stream defaultProtocol
-  connect sendSocket sendAddr
-  sendAll sendSocket messagetext
-  close sendSocket
-  return ()
+  result <- try (connect sendSocket sendAddr) :: IO (Either SomeException ())
+  case result of
+    Left e -> do
+      close sendSocket
+      return $ Left $ show e
+    Right () -> do
+      sendAll sendSocket messagetext
+      close sendSocket
+      return $ Right ()
 
 -- | Tuned-up interface to 'Network.BSD.getHostByName'.
 lookupHost :: String -> IO (Maybe AddressData)

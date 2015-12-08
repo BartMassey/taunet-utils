@@ -136,7 +136,10 @@ sendThread  requestBox maybeKey user = do
           messageTo = toUser,
           messageCommands = [],
           messageBody = BSC.pack $ unlines body }
-        generateMessage maybeKey Nothing toAddr message
+        result <- generateMessage maybeKey Nothing toAddr message
+        case result of
+          Left msg -> putStrLn $ "could not send message: " ++ msg
+          Right () -> return ()
 
 displayThread :: MVar Request -> IO ()
 displayThread requestBox = do

@@ -105,9 +105,12 @@ main = do
                     m { messageTo = f, messageFrom = t }
       replicateM_ (knobReplies knobs) $ do
         delay $ floor $ 1000000 * knobDelay knobs
-        generateMessage maybeKey
-                        (Just (recvTime, recvAddr))
-                        (hostAddr recvAddr)
-                        replyMessage
+        result <- generateMessage maybeKey
+                                  (Just (recvTime, recvAddr))
+                                  (hostAddr recvAddr)
+                                  replyMessage
+        case result of
+          Left msg -> logString $ "response failed: " ++ msg
+          Right () -> return ()
       exitSuccess
     reapChildren

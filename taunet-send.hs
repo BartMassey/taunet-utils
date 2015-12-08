@@ -79,14 +79,18 @@ main = do
                        False -> return $ BSC.pack $ unlinesCRLF $
                                   lines $ BSC.unpack msg
                    True -> return ""
-  sendMessage maybeKey (portAddr taunetPort ha) messagetext
-  case maybeListenSocket of
-    Nothing -> return ()
-    Just listenSocket -> do
-      lastReply <- repeat1M nReplies $ do
-        (recvSocket, _) <- accept listenSocket
-        receiveMessage Nothing maybeKey recvSocket
-      close listenSocket
-      putStr $ case keepCRLF of
-                     True -> BSC.unpack lastReply
-                     False -> unlines $ linesCRLF $ BSC.unpack lastReply
+  response <- sendMessage maybeKey (portAddr taunetPort ha) messagetext
+  case response of
+    Left msg -> do
+      putStrLn $ "could not send message: " ++ msg
+    Right () ->
+      case maybeListenSocket of
+        Nothing -> return ()
+        Just listenSocket -> do
+          lastReply <- repeat1M nReplies $ do
+            (recvSocket, _) <- accept listenSocket
+            receiveMessage Nothing maybeKey recvSocket
+          close listenSocket
+          putStr $ case keepCRLF of
+                         True -> BSC.unpack lastReply
+                         False -> unlines $ linesCRLF $ BSC.unpack lastReply

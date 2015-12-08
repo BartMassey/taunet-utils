@@ -167,7 +167,7 @@ parseMessage processCommands plaintext = do
 -- Not well named.
 generateMessage :: Maybe BS.ByteString -> Maybe (String, SockAddr)
                 -> AddressData -> Message
-                -> IO ()
+                -> IO (Either String ())
 generateMessage maybeKey maybeStamp dest message = do
   let plaintext =
         ("version: 0.2\r\n" +++
