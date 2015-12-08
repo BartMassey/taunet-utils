@@ -18,17 +18,19 @@ module TaunetUtil (
 -- * Generic monadic actions.
   failUnless, repeat1M,
 -- * Network send and receive.
-  receiveMessage, sendMessage )
+  receiveMessage, sendMessage, lookupHost )
 where
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.CipherSaber2
 import Data.List (intercalate)
+import Network.BSD
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import Network.Socket.ByteString
 import System.IO
 
+import LocalAddr
 
 -- | Append two bytestrings. Synonym for 'Data.ByteString.Append'.
 (+++) :: BSC.ByteString -> BSC.ByteString -> BSC.ByteString
@@ -152,3 +154,9 @@ sendMessage maybeKey sendAddr plaintext = do
   sendAll sendSocket messagetext
   close sendSocket
   return ()
+
+lookupHost :: String -> IO (Maybe AddressData)
+lookupHost dest = do
+  hostEntry <- getHostByName dest
+  -- XXX For now, assume lookup always succeeds.
+  return $ Just $ AddressDataIPv4 $ hostAddress hostEntry
