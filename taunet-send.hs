@@ -7,7 +7,6 @@
 -- TauNet echo server
 
 import qualified Data.ByteString.Char8 as BSC
-import Network.BSD
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
 import System.Console.ParseArgs
 import System.IO
@@ -59,8 +58,7 @@ main = do
   let nReplies = getRequiredArg argv ArgNReplies
   maybeKey <- maybeGetKey (encrypted && not echoing)
   let dest = getRequiredArg argv ArgDest
-  hostEntry <- getHostByName dest
-  let ha = AddressDataIPv4 $ hostAddress hostEntry
+  Just ha <- lookupHost dest
   let waitForIt = (ha `notElem` localAddresses) && nReplies > 0
   maybeListenSocket <-
       case waitForIt && not echoing of
