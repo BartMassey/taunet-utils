@@ -21,6 +21,9 @@ import LocalAddr
 import TaunetUtil
 import TaunetMessage
 
+debug :: Bool
+debug = False
+
 data ArgIndex = ArgUser
               deriving (Eq, Ord, Enum, Show)
 
@@ -52,20 +55,28 @@ receiveThread requestBox maybeKey = do
                    recvSocket
     when (BS.length plaintext > 0) $ do
       let received = parseMessage False plaintext
+      when debug $ putStrLn "*receiveThread: putMVar"
       putMVar requestBox (Display ha recvTime received)
+      when debug $ putStrLn "*receiveThread: put"
+
+
 
 sendThread :: MVar Request -> Maybe BS.ByteString -> String
            -> IO ()
 sendThread  requestBox maybeKey user = forever $ do
   _ <- getLine
+  when debug $ putStrLn "*sendThread: holding"
   putMVar requestBox (Hold True)
+  when debug $ putStrLn "*sendThread: held"
   putStr "to: "
   hFlush stdout
   toUser <- getLine
   putStrLn "Message: end with \".\" line to send or \"!\" line to abort"
   body <- readBody
   sendIt toUser body
+  when debug $ putStrLn "*sendThread: unholding"
   putMVar requestBox (Hold False)
+  when debug $ putStrLn "*sendThread: unheld"
   where
     readBody = do
       line <- getLine
@@ -101,7 +112,9 @@ displayThread requestBox = do
   held <- newIORef False
   holdQueue <- newIORef []
   forever $ do
+    when debug $ putStrLn "*displayThread: takeMVar"
     request <- takeMVar requestBox
+    when debug $ putStrLn "*displayThread: taken"
     skipQueue <-
         case request of
           Hold b -> do
