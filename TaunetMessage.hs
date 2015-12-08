@@ -185,4 +185,9 @@ showMessage :: Message -> String
 showMessage m =
     (printf "from: %s\n" (messageFrom m)) ++
     (printf "to: %s\n\n" (messageTo m)) ++
-    (BSC.unpack $ messageBody m)
+    body
+    where
+      -- XXX This is gross: we should remember the body from
+      -- parseMessage, but that makes things uglier.
+      body = unlines $ tail $ dropWhile (not . null) $
+             linesCRLF $ BSC.unpack $ messageBody m

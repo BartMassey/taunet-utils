@@ -65,8 +65,6 @@ receiveThread requestBox maybeKey = do
       putMVar requestBox (Display ha recvTime received)
       when debugMVar $ putStrLn "*receiveThread: put"
 
-
-
 sendThread :: MVar Request -> Maybe BS.ByteString -> String
            -> IO ()
 sendThread  requestBox maybeKey user = forever $ do
