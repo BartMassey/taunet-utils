@@ -21,8 +21,11 @@ import LocalAddr
 import TaunetUtil
 import TaunetMessage
 
-debug :: Bool
-debug = False
+debugMVar :: Bool
+debugMVar = False
+
+debugReceive :: Bool
+debugReceive = False
 
 data ArgIndex = ArgUser
               deriving (Eq, Ord, Enum, Show)
@@ -45,18 +48,22 @@ receiveThread requestBox maybeKey = do
   bind taunetSocket $ SockAddrInet taunetPort 0
   listen taunetSocket 1
   forever $ do
+    when debugReceive $ putStrLn "*receiveThread: accept"
     (recvSocket, recvAddr) <- accept taunetSocket
     let ha = hostAddr recvAddr
     recvTime <- getTimeRFC3339
+    when debugReceive $ putStrLn "*receiveThread: receiveMessage"
     plaintext <- receiveMessage
                    (Just (2 * maxMessageSize))
                    maybeKey
                    recvSocket
+    when debugReceive $ BSC.putStrLn $
+                        "*receiveThread: plaintext:\n" +++ plaintext
     when (BS.length plaintext > 0) $ do
       let received = parseMessage False plaintext
-      when debug $ putStrLn "*receiveThread: putMVar"
+      when debugMVar $ putStrLn "*receiveThread: putMVar"
       putMVar requestBox (Display ha recvTime received)
-      when debug $ putStrLn "*receiveThread: put"
+      when debugMVar $ putStrLn "*receiveThread: put"
 
 
 
@@ -64,18 +71,18 @@ sendThread :: MVar Request -> Maybe BS.ByteString -> String
            -> IO ()
 sendThread  requestBox maybeKey user = forever $ do
   _ <- getLine
-  when debug $ putStrLn "*sendThread: holding"
+  when debugMVar $ putStrLn "*sendThread: holding"
   putMVar requestBox (Hold True)
-  when debug $ putStrLn "*sendThread: held"
+  when debugMVar $ putStrLn "*sendThread: held"
   putStr "to: "
   hFlush stdout
   toUser <- getLine
   putStrLn "Message: end with \".\" line to send or \"!\" line to abort"
   body <- readBody
   sendIt toUser body
-  when debug $ putStrLn "*sendThread: unholding"
+  when debugMVar $ putStrLn "*sendThread: unholding"
   putMVar requestBox (Hold False)
-  when debug $ putStrLn "*sendThread: unheld"
+  when debugMVar $ putStrLn "*sendThread: unheld"
   where
     readBody = do
       line <- getLine
@@ -111,20 +118,17 @@ displayThread requestBox = do
   held <- newIORef False
   holdQueue <- newIORef []
   forever $ do
-    when debug $ putStrLn "*displayThread: takeMVar"
+    when debugMVar $ putStrLn "*displayThread: takeMVar"
     request <- takeMVar requestBox
-    when debug $ putStrLn "*displayThread: taken"
-    skipQueue <-
-        case request of
-          Hold b -> do
-            writeIORef held b
-            return b
-          Display _ _ _ -> do
-            qs <- readIORef holdQueue
-            writeIORef holdQueue (request : qs)
-            h <- readIORef held
-            return $ not h
-    when (not skipQueue) $ do
+    when debugMVar $ putStrLn "*displayThread: taken"
+    case request of
+      Hold b -> do
+        writeIORef held b
+      Display _ _ _ -> do
+        qs <- readIORef holdQueue
+        writeIORef holdQueue (request : qs)
+    h <- readIORef held
+    unless h $ do
       qs <- readIORef holdQueue
       mapM_ handler $ reverse qs
       where
