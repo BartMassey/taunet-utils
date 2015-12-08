@@ -26,7 +26,7 @@ where
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.CipherSaber2
-import Data.List (intercalate)
+import Data.List (intercalate, foldl')
 import qualified Data.Map as M
 import Network.BSD
 import Network.Socket hiding (send, sendTo, recv, recvFrom)
@@ -194,14 +194,22 @@ lookupUserMap userMap userId = M.lookup userId userMap
 
 printUserMap :: UserMap -> IO ()
 printUserMap userMap = do
-  flip mapM_ (M.elems userMap) $ (\u ->
-      case (userDataFullname u) of
-        Nothing ->
-            printf "%s\t%s\n"
-                   (userDataId u)
-                   (userDataHost u)
-        Just fn -> do
-            printf "%s\t%s\t%s\n"
-                   (userDataId u)
-                   (userDataHost u)
-                   fn )
+  let userData = M.elems userMap
+  let fieldWidths =
+          foldl' widen [0, 0] userData
+          where
+            widen [n0, n1] (UserData u0 u1 _) =
+                [ n0 `max` length u0,
+                  n1 `max` length u1 ]
+            widen _ _ = error "internal error: unexpected field widths"
+  flip mapM_ userData $ (\u ->
+    let formatU extractor n =
+            let w = fieldWidths !! n
+                f = extractor u in
+            f ++ replicate (w + 3 - length f) ' ' in
+    printf "%s%s%s\n"
+           (formatU userDataId 0)
+           (formatU userDataHost 1)
+           (case userDataFullname u of
+                Nothing -> ""
+                Just s -> s ) )
