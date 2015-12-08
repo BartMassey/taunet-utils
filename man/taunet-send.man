@@ -50,7 +50,7 @@ Wait for zero or more replies. Output the last reply received.
 This destination address should be a numeric IPv4 address or
 a hostname that can be resolved to such.
 .SH SEE ALSO
-taunet-echo(1)
+taunet-echo(1), taunet-node(1)
 .SH AUTHOR
 Bart Massey
 .I <bart@cs.pdx.edu>

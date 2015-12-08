@@ -160,19 +160,24 @@ sendMessage maybeKey sendAddr plaintext = do
   close sendSocket
   return ()
 
+-- | Tuned-up interface to 'Network.BSD.getHostByName'.
 lookupHost :: String -> IO (Maybe AddressData)
 lookupHost dest = do
   hostEntry <- getHostByName dest
   -- XXX For now, assume lookup always succeeds.
   return $ Just $ AddressDataIPv4 $ hostAddress hostEntry
 
+-- | User information.
 data UserData = UserData {
       userDataId :: String,
       userDataHost :: String,
       userDataFullname :: Maybe String }
 
+-- | A map from user ID to user information.
 type UserMap = M.Map String UserData
 
+-- | Read a 'UserMap' from the CSV file `node-table.csv` in
+-- the current directory.
 getUserMap :: IO UserMap
 getUserMap = do
   csvFile <- readFile "node-table.csv"
@@ -189,9 +194,13 @@ getUserMap = do
                 n -> Just n
     readRecord _ = error "bad user table"
 
+-- | Lookup a particular user ID in the 'UserMap'. Here
+-- mostly for convenience, as it's really just 'Data.Map.Lookup'
+-- with its arguments in sensible order.
 lookupUserMap :: UserMap -> String -> Maybe UserData
 lookupUserMap userMap userId = M.lookup userId userMap
 
+-- | Render a 'UserMap' with reasonable formatting.
 printUserMap :: UserMap -> IO ()
 printUserMap userMap = do
   let userData = M.elems userMap

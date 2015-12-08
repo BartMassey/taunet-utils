@@ -1,0 +1,54 @@
+.\" Copyright (c) 2015 Bart Massey
+.\" This work is licensed under the GPL version 3 or later.
+.\" Please see the file COPYING in the source
+.\" distribution of this software for license terms.
+.TH TAUNET-NODE 1 2015-11-28 "TauNet" "TauNet Utils"
+.SH NAME
+taunet-node \- TauNet node client
+.SH SYNOPSIS
+.BR taunet-node username
+.SH DESCRIPTION
+.PP
+This is an implementation of a TauNet node, featuring a
+simplistic command-line interface.
+.PP
+For encryption, a file
+.B key.txt
+should be present in the startup directory, containing
+a single line comprising an ASCII CipherSaber-2 key.
+.SH OPTIONS
+.TP
+.B username
+The username whose messages you want to receive,
+i.e. you. Messages from other users will be rejected.
+.SH INTERFACE
+.PP
+.B "taunet-send"
+normally is in a mode where it listens for and displays
+incoming messages. Hitting the enter key will prompt for
+a destination address and then for a message body.
+.PP
+When prompted for a destination address, you may enter
+nothing, in which case the address book will be displayed.
+You may enter a TauNet username, in which case the name will
+be looked up in the address book. Finally, you can enter a
+username and hostname/address, in which case the address
+book will be ignored.
+.PP
+The
+message body can be terminated with either '.' or '!'
+on a line by itself: the former will silently attempt to
+send the message, the latter will abort sending.
+.PP
+While you are typing a message, incoming messages will be
+queued rather than displayed. When you leave message
+composition mode, queued messages will then be displayed.
+.SH SEE ALSO
+taunet-echo(1), taunet-send(1)
+.SH AUTHOR
+Bart Massey
+.I <bart@cs.pdx.edu>
+.SH LICENSE
+This work is licensed under the GPL version 3 or later.
+Please see the file COPYING in the source distribution of
+this software for license terms.

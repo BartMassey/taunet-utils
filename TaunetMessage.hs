@@ -6,10 +6,17 @@
 
 -- TauNet message utilities
 
+-- | This module contains various functions for generating
+-- and parsing messages, as well as some associated logging
+-- functionality.
 module TaunetMessage (
-  Knobs(..), Message(..), Failure(..), FailFunc,
-  getKnobs, parseMessage, generateMessage,
-  logString, logMessage, showMessage )
+  -- * Messages
+  Message(..), Failure(..), FailFunc,
+  generateMessage, showMessage, 
+  -- * Message Parsing  
+  Knobs(..), getKnobs, parseMessage,
+  -- * Logging
+  logString, logMessage )
 where
 
 import qualified Data.ByteString as BS
@@ -29,18 +36,31 @@ import TaunetUtil
 data Command = CommandReplies Int | CommandDelay Double
              deriving Show
 
+-- | 'Knobs' are parsed out of the commands in a `taunet-echo`
+-- request message.
 data Knobs = Knobs {
-      knobReplies :: Int,
-      knobDelay :: Double }
+       knobReplies :: Int, -- ^ Number of times to reply to the echo request.
+       knobDelay :: Double -- ^ Number of seconds to delay before each reply.
+     }
 
-data Message = Message { messageTo, messageFrom :: String,
-                         messageCommands :: [Command],
-                         messageBody :: BS.ByteString }
-             deriving Show
+-- | 'Message' record for sending and receiving. The
+-- 'messageCommands' field is an internal-use-only kludge
+-- used for command parsing. There should probably be a
+-- typeclass here.
+data Message = Message {
+       messageTo, messageFrom :: String, -- ^ Source and destination.
+       messageCommands :: [Command], -- ^ Internal field.
+       messageBody :: BS.ByteString  -- ^ Contains just message body
+                                     -- when sending, but full message
+                                     -- text on receipt. This should be
+                                     -- fixed.
+    } deriving Show
 
-data Failure = Failure { failureMessage :: String,
-                         failureBody :: BS.ByteString }
-             deriving Show
+-- | A 'Failure' record is used to record a failure and its reasons.
+data Failure = Failure {
+       failureMessage :: String, -- ^ Reason for failure.
+       failureBody :: BS.ByteString -- ^ Entire failed message, I think.
+    } deriving Show
 
 type FailFunc = String -> forall a . Either Failure a
 
@@ -49,6 +69,8 @@ defaultKnobs = Knobs {
                  knobReplies = 1,
                  knobDelay = 0.1 }
 
+-- | Process parsed commands to get values for the knobs.
+-- Default values are one reply and 0.1 seconds delay.
 getKnobs :: Either Failure Message -> Knobs
 getKnobs (Right (Message { messageCommands = commands})) =
     foldl' handleCommand defaultKnobs commands
@@ -105,6 +127,8 @@ removeHeader header target failure
     where
       paddedHeader = header ++ ": "
 
+-- | Process a raw message, dealing with header parsing and
+-- command parsing.
 parseMessage :: Bool -> BS.ByteString -> Either Failure Message
 parseMessage _ plaintext
     | BS.length plaintext > maxMessageSize =
@@ -139,6 +163,8 @@ parseMessage processCommands plaintext = do
         where
           validChar c = isAlpha c || isDigit c || c == '-'
 
+-- | Format up a message and send it using 'TaunetUtils.sendMessage'.
+-- Not well named.
 generateMessage :: Maybe BS.ByteString -> Maybe (String, SockAddr)
                 -> AddressData -> Message
                 -> IO ()
@@ -162,8 +188,11 @@ generateMessage maybeKey maybeStamp dest message = do
           Just (r, a) ->
               BSC.pack r +++ " " +++ BSC.pack (show a) +++ "\r\n"
 
--- XXX Open the log file on each message for
--- poor-person's synchronization.
+-- | Write a date and pid stamp and the given message
+-- to the log file "echo.log" in the current directory.
+--
+-- Opens the log file on each message for
+-- poor-person's synchronization: this should be fixed.
 logString :: String -> IO ()
 logString msg = do
   dateStr <- getTimeRFC3339
@@ -172,6 +201,8 @@ logString msg = do
   _ <- hPrintf hLog "%s: %s: %s\n" dateStr (show pid) msg
   hClose hLog
 
+-- | Log sender and recipient info for a message to
+-- the log file.
 logMessage :: AddressData -> Either Failure Message -> IO ()
 logMessage address msg = do
   let addressStr = show address
@@ -181,6 +212,9 @@ logMessage address msg = do
     Left (Failure { failureMessage = failure }) ->
       logString $ printf "(%s) -> : %s" addressStr failure
 
+-- | Format a message for printing. Strips the headers off
+-- the body first, which should be fixed by not having them
+-- there in the first place.
 showMessage :: Message -> String
 showMessage m =
     (printf "from: %s\n" (messageFrom m)) ++
