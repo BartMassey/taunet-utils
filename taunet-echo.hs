@@ -91,7 +91,7 @@ main = do
       when (ha `elem` localAddresses) exitSuccess
       let replyMessage =
               case received of
-                Right message -> message
+                Right message -> swapFromTo message
                 Left failure ->
                     Message {
                       messageTo = failUser ++ "-TO",
@@ -100,6 +100,9 @@ main = do
                       messageBody =
                           BSC.pack (failureMessage failure) +++
                                    "\r\n" +++ failureBody failure }
+              where
+                swapFromTo m@(Message { messageTo = t, messageFrom = f }) =
+                    m { messageTo = f, messageFrom = t }
       replicateM_ (knobReplies knobs) $ do
         delay $ floor $ 1000000 * knobDelay knobs
         generateMessage maybeKey
