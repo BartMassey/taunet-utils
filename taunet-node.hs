@@ -164,9 +164,9 @@ displayThread requestBox = do
                  (show ha)
                  (failureMessage failure)
         handler (Display ha recvTime (Right message)) = do
-          printf "%s: message from %s\n"
-                 recvTime
-                 (show ha)
+          _ <- printf "%s: message from %s\n"
+                      recvTime
+                      (show ha)
           putStrLn $ showMessage message
           hFlush stdout
         handler _ = error "internal error: bogus message in hold queue"
