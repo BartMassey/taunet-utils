@@ -9,7 +9,7 @@
 module TaunetMessage (
   Knobs(..), Message(..), Failure(..), FailFunc,
   getKnobs, parseMessage, generateMessage,
-  logString, logMessage )
+  logString, logMessage, showMessage )
 where
 
 import qualified Data.ByteString as BS
@@ -170,3 +170,9 @@ logMessage address msg = do
       logString $ printf "%s (%s) -> %s" from addressStr to
     Left (Failure { failureMessage = failure }) ->
       logString $ printf "(%s) -> : %s" addressStr failure
+
+showMessage :: Message -> String
+showMessage m =
+    (printf "from: %s\n" (messageFrom m)) ++
+    (printf "to: %s\n\n" (messageTo m)) ++
+    (BSC.unpack $ messageBody m)
