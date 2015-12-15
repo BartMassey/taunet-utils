@@ -162,10 +162,11 @@ displayThread requestBox = do
       writeIORef holdQueue []
       where
         handler (Display ha recvTime (Left failure)) =
-          printf "%s: failed message from %s: %s\n\n"
+          printf "%s: failed message from %s: %s\n%s\n"
                  recvTime
                  (show ha)
                  (failureMessage failure)
+                 (show $ take 200 $ BSC.unpack $ failureBody failure)
         handler (Display ha recvTime (Right message)) = do
           _ <- printf "%s: message from %s\n"
                       recvTime
